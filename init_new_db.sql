@@ -283,7 +283,19 @@ ALTER TABLE system_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 
 -- 6. POLICIES
--- (Re-enforcing optimized policies)
+-- Clean up existing policies before recreating to ensure idempotency
+DROP POLICY IF EXISTS "Public products access" ON products;
+DROP POLICY IF EXISTS "Public categories access" ON categories;
+DROP POLICY IF EXISTS "Public brands access" ON brands;
+DROP POLICY IF EXISTS "Public collections access" ON collections;
+DROP POLICY IF EXISTS "Public tags access" ON tags;
+DROP POLICY IF EXISTS "Public site_settings access" ON site_settings;
+DROP POLICY IF EXISTS "Admin full access" ON products;
+DROP POLICY IF EXISTS "Admin full access" ON orders;
+DROP POLICY IF EXISTS "Admin full access" ON customers;
+DROP POLICY IF EXISTS "Admin full access" ON admins;
+
+-- Re-creating optimized policies
 CREATE POLICY "Public products access" ON products FOR SELECT USING (true);
 CREATE POLICY "Public categories access" ON categories FOR SELECT USING (true);
 CREATE POLICY "Public brands access" ON brands FOR SELECT USING (true);
@@ -291,9 +303,7 @@ CREATE POLICY "Public collections access" ON collections FOR SELECT USING (true)
 CREATE POLICY "Public tags access" ON tags FOR SELECT USING (true);
 CREATE POLICY "Public site_settings access" ON site_settings FOR SELECT USING (true);
 
--- Customer Self-Access (Using Subabase Auth or Custom logic depends on client implementation)
--- For this platform, we rely on the API layer and Middleware for complex filtering, 
--- but these provide a baseline.
+-- Admin Full Access
 CREATE POLICY "Admin full access" ON products FOR ALL USING (true);
 CREATE POLICY "Admin full access" ON orders FOR ALL USING (true);
 CREATE POLICY "Admin full access" ON customers FOR ALL USING (true);
