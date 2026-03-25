@@ -1,0 +1,82 @@
+import type { Metadata } from "next";
+import { Playfair_Display, Inter, Noto_Sans_Arabic } from "next/font/google";
+import "../globals.css";
+import Navbar from "@/components/Navbar";
+import { getCustomerSession } from "@/lib/customer-auth";
+import { CartProvider } from "@/context/CartContext";
+import ToastContainer from "@/components/ui/Toast";
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { routing } from '@/i18n/routing';
+
+const playfair = Playfair_Display({
+    subsets: ["latin"],
+    variable: "--font-serif",
+});
+
+const inter = Inter({
+    subsets: ["latin"],
+    variable: "--font-sans",
+});
+
+const notoArabic = Noto_Sans_Arabic({
+    subsets: ["arabic"],
+    variable: "--font-arabic",
+    weight: ["400", "500", "600", "700"],
+});
+
+export const metadata: Metadata = {
+    title: "Demo Perfume | Premium Fragrance Platform",
+    description:
+        "Premium B2B wholesale platform for perfume distributors. High-quality fragrances at wholesale prices.",
+    manifest: "/manifest.json",
+    themeColor: "#D4AF37",
+    viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
+};
+
+import Footer from "@/components/Footer";
+import WhatsAppButton from "@/components/WhatsAppButton";
+import { getSiteSettings } from "@/services/settings-service";
+import AnnouncementMarquee from "@/components/shop/AnnouncementMarquee";
+
+export default async function RootLayout(props: {
+    children: React.ReactNode;
+    params: Promise<{ locale: string }>;
+}) {
+    const { children } = props;
+    const { locale } = await props.params;
+
+    // Validate that the incoming `locale` is supported
+    if (!routing.locales.includes(locale as any)) {
+        notFound();
+    }
+
+    const messages = await getMessages();
+    const customer = await getCustomerSession();
+    const settings = await getSiteSettings();
+    const direction = locale === 'ar' ? 'rtl' : 'ltr';
+
+    return (
+        <html lang={locale} dir={direction}>
+            <body
+                className={`${playfair.variable} ${inter.variable} ${notoArabic.variable} ${locale === 'ar' ? 'font-arabic' : 'font-sans'} antialiased flex flex-col min-h-screen`}
+            >
+                <NextIntlClientProvider messages={messages}>
+                    <CartProvider>
+                        <header className="fixed top-0 left-0 w-full z-50 flex flex-col">
+                            <AnnouncementMarquee />
+                            <Navbar customerName={customer?.name} settings={settings} />
+                        </header>
+                        <main className="flex-1">
+                            {children}
+                        </main>
+                        <Footer settings={settings} />
+                        <WhatsAppButton phoneNumber={settings.whatsapp_number} />
+                        <ToastContainer />
+                    </CartProvider>
+                </NextIntlClientProvider>
+            </body>
+        </html>
+    );
+}

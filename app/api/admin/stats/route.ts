@@ -1,0 +1,13 @@
+import { NextResponse } from "next/server";
+import { getAdminStats } from "@/services/admin-service";
+import { requireAdminSession } from "@/lib/admin-auth";
+
+export async function GET() {
+    try {
+        await requireAdminSession();
+        const stats = await getAdminStats();
+        return NextResponse.json(stats);
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to fetch admin statistics" }, { status: 500 });
+    }
+}

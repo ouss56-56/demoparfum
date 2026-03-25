@@ -1,0 +1,94 @@
+import { NextResponse } from "next/server";
+import { createOrder, getOrders, getOrdersByCustomer } from "@/services/order-service";
+import { getCustomerSession, requireCustomerSession } from "@/lib/customer-auth";
+import { getAdminSession } from "@/lib/admin-auth";
+import { createOrderSchema, formatZodErrors } from "@/lib/validation";
+import { AppError, errorResponse, Errors } from "@/lib/errors";
+import { acquireOrderLock, releaseOrderLock } from "@/lib/order-lock";
+import { logEvent } from "@/lib/logger";
+
+export async function POST(request: Request) {
+    try {
+        // ── Auth ────────────────────────────────────────────────────────────
+        const customer = await requireCustomerSession();
+
+        // ── Validate Input (Zod) ────────────────────────────────────────────
+        const body = await request.json();
+        const parsed = createOrderSchema.safeParse(body);
+        if (!parsed.success) {
+            const err = Errors.invalidInput(formatZodErrors(parsed.error));
+            return NextResponse.json(
+                { success: false, error_code: err.code, message: err.message },
+                { status: err.statusCode }
+            );
+        }
+
+        const { items, shippingData } = parsed.data;
+
+        // ── Duplicate Order Lock ────────────────────────────────────────────
+        const lockAcquired = acquireOrderLock(customer.id);
+        if (!lockAcquired) {
+            const err = Errors.duplicateOrder();
+            return NextResponse.json(
+                { success: false, error_code: err.code, message: err.message },
+                { status: err.statusCode }
+            );
+        }
+
+        try {
+            let initialLogMessage = "Order placed successfully.";
+            if (shippingData) {
+                initialLogMessage = `Order placed. Ship to: ${shippingData.name || ''}, ${shippingData.phone || ''}, ${shippingData.address || ''}, ${shippingData.wilayaName || ''}. Notes: ${shippingData.notes || 'None'}`;
+            }
+
+            const order = await createOrder({
+                customerId: customer.id,
+                items,
+                createdBy: "CUSTOMER",
+                notes: initialLogMessage,
+                wilayaNumber: shippingData?.wilayaNumber,
+                wilayaName: shippingData?.wilayaName,
+            });
+
+            // Log success (fire-and-forget — never block the response)
+            logEvent("ORDER_CREATED", order.id, `Order created by customer ${customer.id}. Total: ${order.totalPrice}`)
+                .catch((logErr) => console.error("[Logger] Non-blocking log error:", logErr));
+
+            return NextResponse.json({ success: true, data: order }, { status: 201 });
+        } finally {
+            releaseOrderLock(customer.id);
+        }
+    } catch (error: unknown) {
+        console.error("[CRITICAL] Order Placement Failed:", error);
+        if (error instanceof Error) {
+            console.error("Stack trace:", error.stack);
+        }
+        return errorResponse(error);
+    }
+}
+
+export async function GET() {
+    try {
+        // Try to get customer session first
+        const customer = await getCustomerSession();
+        if (customer) {
+            const orders = await getOrdersByCustomer(customer.id);
+            return NextResponse.json({ success: true, data: orders });
+        }
+
+        // If no customer, try to see if it's an admin (e.g. for testing)
+        const admin = await getAdminSession();
+        if (admin) {
+            const orders = await getOrders();
+            return NextResponse.json({ success: true, data: orders });
+        }
+
+        const err = Errors.unauthorized();
+        return NextResponse.json(
+            { success: false, error_code: err.code, message: err.message },
+            { status: err.statusCode }
+        );
+    } catch (error) {
+        return errorResponse(error);
+    }
+}

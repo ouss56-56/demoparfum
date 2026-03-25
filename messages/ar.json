@@ -1,0 +1,818 @@
+{
+    "common": {
+        "nav": {
+            "home": "الرئيسية",
+            "boutique": "المتجر",
+            "panier": "سلة التسوق",
+            "compte": "الحساب",
+            "admin": "لوحة التحكم",
+            "admin_portal": "بوابة الإدارة",
+            "perfume": "عطور",
+            "lps": "Demo"
+        },
+        "buttons": {
+            "save": "حفظ",
+            "cancel": "إلغاء",
+            "delete": "حذف",
+            "add_to_cart": "أضف إلى السلة",
+            "checkout": "إتمام الطلب",
+            "create_account": "إنشاء حساب",
+            "sign_in": "تسجيل الدخول",
+            "register": "التسجيل",
+            "logout": "تسجيل الخروج",
+            "my_account": "حسابي",
+            "loading": "جارٍ التحميل...",
+            "discover_more": "اكتشف المزيد",
+            "view": "عرض",
+            "reorder": "إعادة الطلب",
+            "confirm_cancellation": "تأكيد الإلغاء",
+            "back": "رجوع",
+            "cancel_order": "إلغاء الطلب"
+        },
+        "labels": {
+            "all_categories": "جميع الفئات",
+            "all_brands": "جميع العلامات التجارية",
+            "in_stock_only": "المتوفر فقط",
+            "out_of_stock": "غير متوفر",
+            "low_stock": "مخزون منخفض",
+            "per_100ml": "لكل 100 مل مرجعي",
+            "currency": "دج",
+            "select_wilaya": "أختر الولاية",
+            "search_wilaya": "البحث عن ولاية...",
+            "select_commune": "أختر البلدية",
+            "search_commune": "البحث عن بلدية...",
+            "no_results": "لم يتم العثور على نتائج",
+            "are_you_sure": "هل أنت متأكد؟"
+        },
+        "alerts": {
+            "reorder_failed": "فشل في إضافة العناصر إلى السلة",
+            "cancel_failed": "فشل إلغاء الطلب",
+            "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+        },
+        "status": {
+            "PENDING": "قيد الانتظار",
+            "CONFIRMED": "تم التأكيد",
+            "PACKED": "تم التغليف",
+            "SHIPPED": "تم الشحن",
+            "DELIVERED": "تم التوصيل",
+            "CANCELLED": "ملغى",
+            "PAID": "مدفوع",
+            "PARTIALLY_PAID": "مدفوع جزئياً",
+            "UNPAID": "غير مدفوع",
+            "SHIPPED_UNPAID": "تم الشحن (غير مدفوع)"
+        }
+    },
+    "registration": {
+        "title": "التسجيل كتاجر",
+        "subtitle": "انضم إلى شبكتنا من تجار العطور الفاخرة في الجزائر.",
+        "trader_info": "معلومات التاجر",
+        "business_details": "تفاصيل النشاط التجاري",
+        "full_name": "الاسم الكامل",
+        "phone": "رقم الهاتف",
+        "shop_name": "اسم المحل",
+        "wilaya": "الولاية",
+        "commune": "البلدية",
+        "address": "العنوان الكامل",
+        "placeholder_name": "أدخل الاسم الكامل",
+        "placeholder_shop": "الاسم التجاري للنشاط",
+        "placeholder_address": "العنوان الكامل، الشارع والحي",
+        "already_registered": "مسجل بالفعل؟",
+        "sign_in_link": "سجل الدخول إلى حسابك",
+        "placeholder_phone": "05 / 06 / 07 ...",
+        "password": "كلمة المرور",
+        "placeholder_password": "6 أحرف على الأقل",
+        "error_registration_failed": "فشل التسجيل. يرجى المحاولة مرة أخرى.",
+        "error_generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    },
+    "login": {
+        "title": "دخول التاجر",
+        "subtitle": "أدخل رقم هاتفك المسجل للوصول إلى لوحة تحكم الجملة.",
+        "phone_label": "رقم الهاتف",
+        "phone_placeholder": "05 / 06 / 07 ...",
+        "password_label": "كلمة المرور",
+        "password_placeholder": "أدخل كلمة المرور",
+        "submit": "تسجيل دخول آمن",
+        "no_account": "لا تملك حساب تاجر؟",
+        "register_link": "سجل الآن",
+        "store_home": "الصفحة الرئيسية",
+        "catalog_link": "الكتالوج",
+        "error_generic": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+        "error_login_failed": "فشل تسجيل الدخول"
+    },
+    "product": {
+        "base_price": "السعر الأساسي",
+        "view_details": "عرض التفاصيل",
+        "available": "متوفر",
+        "variants_note": "ملاحظة: ستتوفر المنتجات تلقائيًا بأوزان 200جم، 250جم، 500جم، و1كجم بناءً على السعر الأساسي.",
+        "added_success": "تمت الإضافة إلى السلة بنجاح!",
+        "added_fail": "فشل في الإضافة إلى السلة",
+        "not_found": "المنتج غير موجود",
+        "back_to_shop": "العودة إلى المتجر",
+        "back_to_catalog": "العودة إلى الكتالوج",
+        "authentic": "أصلي",
+        "premium_fragrance": "عطر فاخر",
+        "low_stock": "مخزون منخفض",
+        "in_stock": "متوفر في المخزون",
+        "out_of_stock": "غير متوفر",
+        "professional_grade": "جودة احترافية",
+        "per_unit": "لكل وحدة من",
+        "selected_size": "الحجم المختار",
+        "order_total": "إجمالي الطلب",
+        "select_size": "اختر الحجم",
+        "configure_quantity": "تحديد الكمية",
+        "units_of": "وحدات من",
+        "wholesale_note": "تغليف بالجملة احترافي للحجم المختار"
+    },
+    "catalog": {
+        "title": "مجموعتنا",
+        "subtitle": "عطور فاخرة مع خيارات حجم مرنة",
+        "search_placeholder": "البحث عن العطور...",
+        "products_found": "منتجات موجودة",
+        "sort_featured": "المميزة",
+        "sort_low_high": "السعر: من الأقل إلى الأعلى",
+        "sort_high_low": "السعر: من الأعلى إلى الأقل",
+        "no_products": "لم يتم العثور على منتجات",
+        "no_products_hint": "حاول تعديل بحثك أو الفلاتر",
+        "discover_more": "اكتشف المزيد"
+    },
+    "cart": {
+        "title": "سلة الجملة",
+        "empty": "سلة التسوق فارغة حاليًا.",
+        "empty_subtitle": "املأ سلتك بأرقى العطور الفاخرة لتجارتك بالجملة.",
+        "continue_shopping": "مواصلة التسوق",
+        "subtotal": "المجموع الفرعي",
+        "subtotal_products": "إجمالي المنتجات",
+        "shipping_fees": "مصاريف الشحن",
+        "shipping_standard": "شحن الجملة القياسي (مجاني)",
+        "grand_total": "المؤشر الإجمالي",
+        "view_cart": "عرض السلة",
+        "checkout_now": "إتمام الطلب الآن",
+        "terms_agree": "بالمضي قدماً، فإنك توافق على شروط خدمة الجملة B2B.",
+        "back_to_catalog": "العودة إلى الكتالوج",
+        "units_of": "وحدات من",
+        "edition": "إصدار"
+    },
+    "checkout": {
+        "title": "إتمام الطلب",
+        "no_items": "لا توجد عناصر لإتمام الطلب",
+        "browse_products": "تصفح المنتجات",
+        "shipping_details": "تفاصيل الشحن",
+        "company_name": "اسم الشركة / الاسم *",
+        "placeholder_name": "اسمك أو اسم المحل",
+        "phone": "الهاتف *",
+        "wilaya": "الولاية *",
+        "address": "العنوان *",
+        "placeholder_address": "عنوان الشحن بالتفصيل",
+        "placeholder_phone": "05 / 06 / 07 ...",
+        "order_notes": "ملاحظات الطلب (اختياري)",
+        "placeholder_notes": "أي تعليمات خاصة للتجهيز أو التوصيل...",
+        "order_summary": "ملخص الطلب",
+        "qty": "الكمية",
+        "total": "الإجمالي",
+        "min_order_met": "تم استيفاء الحد الأدنى لمبلغ الطلب",
+        "min_order_error": "الحد الأدنى لمبلغ الطلب هو 5,000 دج. ينقصك {amount} دج.",
+        "place_order": "إرسال الطلب",
+        "placing_order": "جاري المعالجة...",
+        "order_success_title": "تم إرسال الطلب بنجاح!",
+        "order_success_msg": "تم تأكيد طلبك وإصدار الفاتورة. سنقوم بمعالجته خلال 24 ساعة.",
+        "view_history": "عرض سجل الطلبات",
+        "network_error": "خطأ في الشبكة. يرجى المحاولة مرة أخرى."
+    },
+    "home": {
+        "title": "Demo Perfume - منصة عطور فاخرة",
+        "hero_subtitle": "موزع عطور فاخرة بالجملة",
+        "new_arrivals": "وصل حديثاً",
+        "new_arrivals_subtitle": "أحدث الإضافات إلى مجموعتنا الفاخرة",
+        "best_sellers": "الأكثر مبيعاً",
+        "best_sellers_subtitle": "العطور الأكثر شعبية لدى شركائنا",
+        "featured": "عطور مميزة",
+        "featured_subtitle": "مختارات بعناية لمتجرك",
+        "features_title": "لماذا تختارنا",
+        "cta_title": "انضم إلى شبكتنا",
+        "cta_subtitle": "ابدأ ببيع العطور الفاخرة اليوم",
+        "cta_browse_catalog": "تصفح الكتالوج",
+        "hero": {
+            "title_part1": "جوهر",
+            "title_part2": "الفخامة العالمية",
+            "subtitle": "الوجهة الأولى لتجارة الجملة للعطور الفاخرة في الجزائر. الحصرية والأناقة والتميز في كل زجاجة.",
+            "browse_collections": "تصفح المجموعات",
+            "become_partner": "كن شريكاً معنا",
+            "beats": [
+                {
+                    "heading": "Demo Luxe.",
+                    "sub": "جوهر الحضور."
+                },
+                {
+                    "heading": "صنع في غراس.",
+                    "sub": "زجاج زمردي نقي، لمسة يدوية."
+                },
+                {
+                    "heading": "تشريح العطر.",
+                    "sub": "رذاذ دقيق هندسي."
+                },
+                {
+                    "heading": "بصمتك الخاصة.",
+                    "sub": "تجربة غير مرئية."
+                }
+            ],
+            "experience_now": "خض التجربة الآن",
+            "scroll_down": "مرر للأسفل",
+            "crafting_scent": "صناعة العطر"
+        },
+        "features": {
+            "wholesale_title": "عطور بالجملة",
+            "wholesale_desc": "عطور عالية الجودة بالجملة للموزعين في جميع أنحاء الجزائر.",
+            "flexible_title": "حجم مرن",
+            "flexible_desc": "اطلب بالضبط الكمية التي تحتاجها من خلال نظامنا بالملل.",
+            "fast_delivery_title": "توصيل سريع",
+            "fast_delivery_desc": "توصيل وطني في 58 ولاية خلال 48 ساعة."
+        },
+        "footer_rights": "جميع الحقوق محفوظة"
+    },
+    "account": {
+        "title": "حسابي",
+        "my_account": "حسابي",
+        "trader_partner": "شريك Demo للجملة",
+        "trader_account": "حساب التاجر",
+        "dashboard": "لوحة التحكم",
+        "my_orders": "طلباتي",
+        "reorder": "إعادة الطلب",
+        "settings": "الإعدادات",
+        "orders": "طلباتي",
+        "saved_cart": "السلة المحفوظة",
+        "no_orders": "لا توجد طلبات حتى الآن",
+        "no_orders_placed": "لم يتم تقديم أي طلبات بعد.",
+        "order_id": "الطلب",
+        "order_date": "التاريخ",
+        "order_status": "الحالة",
+        "order_total": "الإجمالي",
+        "total_orders": "إجمالي الطلبات",
+        "total_spent": "إجمالي المنفق",
+        "welcome_back": "مرحباً بعودتك،",
+        "phone_number": "رقم الهاتف",
+        "business_address": "عنوان العمل",
+        "items_count": "{count} عناصر",
+        "more_items": "+ {count} أخرى",
+        "review_checkout": "المراجعة والدفع",
+        "stock_ready": "المخزون جاهز",
+        "browse_catalog": "تصفح الكتالوج",
+        "recent_orders": "الطلبات الأخيرة",
+        "view_all": "عرض الكل",
+        "order_history": "سجل الطلبات",
+        "order_history_subtitle": "إدارة وتتبع شحنات الجملة الخاصة بك.",
+        "no_orders_found": "لم يتم العثور على طلبات",
+        "no_orders_hint": "لم تقم بتقديم أي طلبات بعد. تفضل بزيارة متجرنا لتصفح أحدث مجموعاتنا.",
+        "start_shopping": "ابدأ التسوق",
+        "order_id_label": "رقم الطلب",
+        "date_label": "التاريخ",
+        "status_label": "الحالة",
+        "total_amount_label": "المبلغ الإجمالي",
+        "action_label": "الإجراء",
+        "details_label": "التفاصيل",
+        "manage_label": "إدارة",
+        "pagination_showing": "عرض {start} إلى {end} من أصل {total} طلبات",
+        "order_info": "معلومات الطلب",
+        "shipment_tracking": "تتبع الشحنة",
+        "download_invoice": "تحميل الفاتورة",
+        "order_cancelled": "تم إلغاء الطلب",
+        "order_cancelled_desc": "تم إلغاء هذا الطلب واستعادة المخزون. إذا كنت تعتقد أن هذا خطأ، يرجى الاتصال بالدعم.",
+        "current_status": "الحالة الحالية",
+        "products_ordered": "المنتجات المطلوبة",
+        "per_unit_label": "/ وحدة",
+        "shipping": "الشحن",
+        "free_b2b": "مجاني B2B",
+        "delivery_info": "معلومات التوصيل",
+        "tracking_number_label": "رقم التتبع",
+        "ship_with_label": "تم الشحن مع {company}",
+        "status": {
+            "PENDING": "قيد الانتظار",
+            "CONFIRMED": "تم التأكيد",
+            "PACKED": "تم التغليف",
+            "SHIPPED": "تم الشحن",
+            "DELIVERED": "تم التوصيل",
+            "CANCELLED": "ملغى"
+        }
+    },
+    "admin": {
+        "dashboard": {
+            "title": "نظرة عامة على لوحة القيادة",
+            "subtitle": "مرحباً بعودتك. إليك ما يحدث في متجرك اليوم.",
+            "total_revenue": "إجمالي الإيرادات",
+            "unpaid_balance": "الرصيد غير المدفوع",
+            "unpaid_note": "يتضمن {count} طلبات مدفوعة جزئياً",
+            "daily_revenue": "الإيرادات اليومية",
+            "monthly_revenue": "إيرادات الشهر",
+            "total_profit": "إجمالي الأرباح",
+            "avg_margin": "متوسط الهامش",
+            "profit": "الأرباح",
+            "health_score": "درجة الصحة",
+            "total_orders": "إجمالي الطلبات",
+            "pending": "قيد الانتظار",
+            "customers": "العملاء",
+            "products": "المنتجات",
+            "recent_orders": "الطلبات الأخيرة",
+            "order_id": "رقم الطلب",
+            "customer": "العميل",
+            "date": "التاريخ",
+            "total": "الإجمالي",
+            "payment": "الدفع",
+            "status": "الحالة",
+            "no_orders": "لم يتم العثور على طلبات بعد.",
+            "view_details": "عرض التفاصيل",
+            "best_sellers": "الأكثر مبيعاً",
+            "units_sold": "الوحدات المباعة",
+            "revenue": "الإيرادات",
+            "notifications": {
+                "unread": "{count} إشعار(ات) غير مقروءة"
+            },
+            "inventory_alerts": {
+                "low_stock": "{count} تنبيه(ات) انخفاض المخزون"
+            },
+            "stock_forecast": {
+                "title": "توقعات نفاد المخزون",
+                "action": "مطلوب إجراء",
+                "days_remaining": "بقي {count} أيام",
+                "critical": "حرج",
+                "restock": "إعادة تموين",
+                "table": {
+                    "product": "المنتج",
+                    "current": "المخزون الحالي",
+                    "forecast": "توقعات النفاد"
+                }
+            }
+        },
+        "products": {
+            "title": "المنتجات",
+            "subtitle": "إدارة كتالوج العطور، الأسعار، وقيود البيع بالجملة.",
+            "search_placeholder": "البحث عن المنتجات...",
+            "all_status": "جميع الحالات",
+            "add_product": "إضافة منتج",
+            "table": {
+                "product": "المنتج",
+                "category": "الفئة",
+                "price": "السعر الأساسي (100غ)",
+                "stock": "إجمالي المخزون (غ)",
+                "status": "الحالة",
+                "actions": "الإجراءات"
+            },
+            "status": {
+                "ACTIVE": "نشط",
+                "INACTIVE": "غير نشط",
+                "DRAFT": "مسودة"
+            },
+            "available": "متوفر",
+            "uncategorized": "غير مصنف",
+            "no_products": "لم يتم العثور على منتجات.",
+            "delete_confirm": "هل أنت متأكد أنك تريد حذف هذا المنتج؟",
+            "modal": {
+                "create": "إنشاء منتج جديد",
+                "edit": "تعديل المنتج",
+                "name_label": "اسم المنتج",
+                "name_placeholder": "مثال: Demo Royal Gold",
+                "brand_label": "العلامة التجارية",
+                "brand_placeholder": "مثال: Demo Luxe",
+                "category_label": "الفئة",
+                "status_label": "الحالة",
+                "image_label": "رابط الصورة الأساسية",
+                "price_label": "سعر البيع (لكل 100غ) (دج)",
+                "purchase_price_label": "سعر الشراء (التكلفة) (لكل 100غ) (دج)",
+                "stock_label": "إجمالي المخزون (غرام)",
+                "pricing_note": "ملاحظة: ستتوفر المنتجات تلقائياً بأحجام 200غ، 250غ، 500غ، و 1كغ بناءً على السعر الأساسي.",
+                "collections_label": "المجموعات",
+                "tags_label": "الوسوم",
+                "description_label": "الوصف",
+                "cancel": "إلغاء",
+                "save": "حفظ المنتج",
+                "saving": "جاري الحفظ..."
+            }
+        },
+        "orders": {
+            "title": "الطلبات",
+            "subtitle": "إدارة طلبات B2B وتحديث حالات المتابعة.",
+            "search_placeholder": "البحث عن طريق رقم الطلب أو اسم المتجر...",
+            "table": {
+                "order_details": "تفاصيل الطلب",
+                "customer_info": "معلومات العميل",
+                "total_amount": "المبلغ الإجمالي",
+                "status_action": "الحالة والإجراء",
+                "invoice": "الفاتورة"
+            },
+            "items_count": "{count} أصناف",
+            "no_invoice": "لا توجد فاتورة",
+            "view_invoice": "عرض",
+            "no_orders": "لم يتم العثور على طلبات مطابقة لبحثك.",
+            "update_confirm": "هل أنت متأكد أنك تريد تغيير حالة هذا الطلب إلى {status}؟",
+            "modal": {
+                "title": "تفاصيل الطلب",
+                "customer": "العميل",
+                "items_included": "الأصناف المتضمنة",
+                "total_validated": "إجمالي المصادق عليه",
+                "per_unit": "لكل وحدة",
+                "unknown_product": "منتج غير معروف"
+            }
+        },
+        "customers": {
+            "title": "العملاء",
+            "subtitle": "إدارة أصحاب المخازن B2B والشركاء المسجلين.",
+            "search_placeholder": "البحث عن طريق اسم المتجر أو الاسم الشخصي...",
+            "table": {
+                "business_shop": "المؤسسة / المتجر",
+                "owner_contact": "معلومات صاحب المتجر",
+                "location": "الموقع",
+                "joined": "تاريخ الانضمام",
+                "total_orders": "إجمالي الطلبات",
+                "access": "الصلاحية"
+            },
+            "orders_count": "{count} طلبات",
+            "suspend": "تجميد",
+            "suspend_title": "تعطيل هذا الحساب",
+            "restore": "استعادة",
+            "restore_title": "استعادة صلاحية الوصول للعميل",
+            "no_customers": "لم يتم العثور على عملاء مسجلين."
+        },
+        "categories": {
+            "title": "الفئات",
+            "subtitle": "إدارة مجموعات العطور وخطوط الإنتاج.",
+            "search_placeholder": "البحث عن الفئات...",
+            "add_category": "إنشاء فئة",
+            "table": {
+                "name": "اسم الفئة",
+                "description": "الوصف",
+                "products": "المنتجات المرتبطة",
+                "actions": "الإجراءات"
+            },
+            "products_count": "{count} منتجات",
+            "no_categories": "لم يتم العثور على فئات.",
+            "delete_confirm": "هل أنت متأكد أنك تريد حذف هذه الفئة؟",
+            "delete_error": "لا يمكن حذف هذه الفئة. تحتوي على {count} منتجات نشطة.",
+            "modal": {
+                "create": "فئة جديدة",
+                "edit": "تعديل الفئة",
+                "name_label": "اسم الفئة",
+                "name_placeholder": "مثال: Blue Edition",
+                "desc_label": "الوصف (اختياري)",
+                "desc_placeholder": "أضف وصفاً لخط الإنتاج هذا...",
+                "cancel": "إلغاء",
+                "save": "حفظ الفئة",
+                "saving": "جاري الحفظ..."
+            }
+        },
+        "brands": {
+            "title": "العلامات التجارية",
+            "subtitle": "إدارة قائمة العلامات التجارية الفاخرة ومراقبة المنتجات المرتبطة بها.",
+            "search_placeholder": "المنتجات...",
+            "add_brand": "إضافة علامة تجارية",
+            "table": {
+                "name": "العلامة التجارية",
+                "description": "الوصف",
+                "products": "المنتجات",
+                "actions": "الإجراءات",
+                "products_count": "منتجات"
+            },
+            "no_brands": "لم يتم العثور على علامات تجارية.",
+            "delete_confirm": "هل أنت متأكد أنك تريد حذف هذه العلامة التجارية؟",
+            "delete_error": "لا يمكن حذف هذه العلامة التجارية. تحتوي على {count} منتجات نشطة.",
+            "modal": {
+                "create": "علامة تجارية جديدة",
+                "edit": "تعديل العلامة التجارية",
+                "name_label": "اسم العلامة التجارية",
+                "name_placeholder": "مثال: Demo Luxe",
+                "desc_label": "الوصف (اختياري)",
+                "desc_placeholder": "أضف وصفاً...",
+                "cancel": "إلغاء",
+                "save": "حفظ العلامة التجارية",
+                "saving": "جاري الحفظ..."
+            }
+        },
+        "collections": {
+            "title": "المجموعات",
+            "subtitle": "إدارة مجموعات العطور ذات الطابع الخاص.",
+            "search_placeholder": "البحث عن المجموعات...",
+            "add_collection": "إنشاء مجموعة",
+            "table": {
+                "name": "اسم المجموعة",
+                "description": "الوصف",
+                "products": "المنتجات",
+                "actions": "الإجراءات"
+            },
+            "no_collections": "لم يتم العثور على مجموعات.",
+            "modal": {
+                "create": "مجموعة جديدة",
+                "edit": "تعديل المجموعة",
+                "name_label": "اسم المجموعة",
+                "desc_label": "الوصف",
+                "cancel": "إلغاء",
+                "save": "حفظ المجموعة"
+            }
+        },
+        "settings": {
+            "title": "إعدادات النظام",
+            "subtitle": "إدارة الإعدادات العالمية لمتجرك وأمان الحساب.",
+            "site": {
+                "title": "معلومات المتجر",
+                "description": "تكوين تفاصيل الاتصال، وسائل التواصل الاجتماعي والهوية البصرية.",
+                "save": "حفظ التغييرات",
+                "saving": "جاري الحفظ...",
+                "save_success": "تم تحديث الإعدادات بنجاح",
+                "save_error": "فشل في تحديث الإعدادات"
+            },
+            "security": {
+                "title": "أمان الوصول",
+                "description": "قم بتحديث كلمة مرور المسؤول لتأمين الوصول."
+            }
+        },
+        "tags": {
+            "title": "الوسوم",
+            "subtitle": "إدارة الوسوم لتصفية المنتجات.",
+            "search_placeholder": "البحث عن الوسوم...",
+            "add_tag": "إنشاء وسم",
+            "table": {
+                "name": "اسم الوسم",
+                "usage": "الاستخدام",
+                "actions": "الإجراءات"
+            },
+            "no_tags": "لم يتم العثور على وسوم.",
+            "modal": {
+                "create": "وسم جديد",
+                "edit": "تعديل الوسم",
+                "name_label": "اسم الوسم",
+                "cancel": "إلغاء",
+                "save": "حفظ الوسم"
+            }
+        },
+        "restock": {
+            "title": "إعادة التموين الذكي والمخزون الراكد",
+            "subtitle": "تنبؤات المخزون المدعومة بالذكاء الاصطناعي بناءً على سرعة المبيعات لمدة 30 يومًا وتحليل رأس المال المجمّد.",
+            "suggestions": {
+                "title": "اقتراحات إعادة التموين",
+                "table": {
+                    "product": "المنتج",
+                    "in_stock": "في المخزن (غ)",
+                    "velocity": "سرعة 30 يوم (غ)",
+                    "runway": "المدة المتبقية",
+                    "recommendation": "التوصية"
+                },
+                "days": "أيام"
+            },
+            "dead_stock": {
+                "title": "تحليل المخزون الراكد",
+                "subtitle": "المنتجات التي لم تحقق مبيعات في آخر 60 يومًا.",
+                "no_dead_stock": "لم يتم اكتشاف مخزون راكد",
+                "no_dead_stock_desc": "شهدت جميع المنتجات في مستودعك حركة في آخر 60 يومًا. مخزونك سائل للغاية.",
+                "table": {
+                    "product": "المنتج",
+                    "unsold": "مخزون غير مباع",
+                    "days_stagnant": "أيام الركود",
+                    "value": "رأس المال المجمّد"
+                },
+                "total_capital": "إجمالي رأس المال المجمّد:"
+            }
+        },
+        "inventory": {
+            "title": "نظرة عامة على المستودع",
+            "subtitle": "إدارة مستويات المخزون، إجراء التعديلات، وعرض سجل المخزون.",
+            "move_history": "سجل الحركة",
+            "search_placeholder": "البحث عن منتج...",
+            "table": {
+                "product": "المنتج",
+                "brand": "العلامة التجارية",
+                "stock": "المخزون الحالي (غ)",
+                "actions": "الإجراءات"
+            },
+            "no_products": "لم يتم العثور على منتجات في المخزون.",
+            "modal": {
+                "adjust_stock": "تعديل المخزون",
+                "modify": "تعديل المخزون لـ",
+                "current_stock": "المخزون الحالي:",
+                "type_label": "نوع التعديل",
+                "type": {
+                    "ADD": "إضافة مخزون (+)",
+                    "REMOVE": "إزالة مخزون (-)",
+                    "SET": "تعيين المخزون بدقة (=)"
+                },
+                "amount_label": "الكمية (غ)",
+                "reason_label": "السبب (داخلي)",
+                "reason_placeholder": "إعادة تموين، تصحيح خطأ، إلخ.",
+                "cancel": "إلغاء",
+                "update": "تحديث المخزون",
+                "updating": "جاري التحديث...",
+                "view_history": "عرض السجل",
+                "resulting_stock": "المخزون الناتج:",
+                "add": "إضافة",
+                "remove": "إزالة",
+                "no_change": "لا يوجد تغيير",
+                "reason_label_detailed": "سبب التعديل"
+            }
+        },
+        "invoices": {
+            "title": "الفواتير",
+            "subtitle": "السجلات التاريخية للإيصالات والفواتير التجارية الصادرة.",
+            "search_placeholder": "البحث عن فاتورة #...",
+            "table": {
+                "number": "رقم الفاتورة",
+                "customer": "العميل",
+                "date": "تاريخ الإصدار",
+                "amount": "المبلغ",
+                "document": "المستند"
+            },
+            "view_output": "عرض المخرج",
+            "no_invoices": "لم يتم إنشاء أي فواتير بعد. يتم إنشاء الفواتير تلقائيًا عند معالجة الطلبات."
+        },
+        "analytics": {
+            "title": "ذكاء الأعمال",
+            "subtitle": "إيرادات مفصلة، أفضل العملاء، وتوقعات الطلب على المنتجات.",
+            "stats": {
+                "revenue_30d": "الإيرادات (30 يوم)",
+                "orders_30d": "الطلبات (30 يوم)",
+                "top_buyers": "أفضل المشترين",
+                "profit_30d": "الأرباح (30 يوم)",
+                "high_demand": "أصناف عالية الطلب"
+            },
+            "charts": {
+                "daily_revenue": "الإيرادات اليومية (آخر 30 يومًا)",
+                "daily_profit_cost": "الأرباح والتكاليف اليومية",
+                "daily_orders": "الطلبات اليومية (آخر 30 يومًا)",
+                "avg_margin": "متوسط الهامش:",
+                "revenue": "الإيرادات",
+                "profit": "الأرباح",
+                "cost": "التكلفة",
+                "orders": "الطلبات"
+            },
+            "performance": {
+                "title": "أداء وتوقعات المنتجات",
+                "table": {
+                    "product": "المنتج",
+                    "demand": "الطلب (30 يوم)",
+                    "lifetime_sold": "إجمالي المباع",
+                    "revenue": "الإيرادات"
+                },
+                "demand_levels": {
+                    "High Demand": "طلب مرتفع",
+                    "Medium Demand": "طلب متوسط",
+                    "Low Demand": "طلب منخفض"
+                },
+                "units": "وحدات"
+            },
+            "top_customers": {
+                "title": "أفضل العملاء (LTV)",
+                "subtitle": "أعلى قيمة إنفاق إجمالية",
+                "orders": "طلبات",
+                "no_data": "لم يتم العثور على طلبات صالحة لتصنيف العملاء."
+            },
+            "top_profitable": {
+                "title": "المنتجات الأكثر ربحية",
+                "subtitle": "المنتجات التي تحقق أعلى ربح مطلق",
+                "units_sold": "وحدات مباعة",
+                "margin": "هامش",
+                "no_data": "لا توجد بيانات مبيعات متاحة."
+            }
+        },
+        "reports": {
+            "title": "تقارير الأعمال",
+            "subtitle": "تصدير البيانات الخام بتنسيق CSV للتحليل المتعمق والمحاسبة.",
+            "export_csv": "تصدير CSV",
+            "inventory": {
+                "title": "تقرير المخزون",
+                "subtitle": "لقطة حالية لمخزون المستودع، عتبات المخزون المنخفض، وبيانات التسعير لجميع المنتجات."
+            },
+            "sales": {
+                "title": "تقرير المبيعات",
+                "subtitle": "سجل كامل للطلبات الصالحة، بما في ذلك التواريخ، أرقام الإيرادات الدقيقة، والعملاء المتصلين."
+            },
+            "customers": {
+                "title": "تقرير العملاء",
+                "subtitle": "قائمة بجميع عملاء B2B على المنصة، مدمجة مع قيمتهم الدائمة وإجمالي عدد مشترياتهم."
+            }
+        },
+        "logs": {
+            "title": "سجلات النشاط والأخطاء",
+            "subtitle": "سجل مراجعة للإجراءات الإدارية واستقرار النظام الخلفي.",
+            "admin_activity": "نشاط المشرف",
+            "system_errors": "أخطاء النظام",
+            "real_time": "في الوقت الحقيقي",
+            "critical": "حرج",
+            "no_activity": "لم يتم العثور على سجلات نشاط",
+            "no_errors": "لم يتم اكتشاف أخطاء في النظام",
+            "on": "على",
+            "show_stack_trace": "عرض تتبع المكدس",
+            "hide_stack_trace": "إخفاء تتبع المكدس"
+        },
+        "sidebar": {
+            "portal": "بوابة الإدارة",
+            "overview": "نظرة عامة",
+            "products": "المنتجات",
+            "categories": "الأصناف",
+            "brands": "العلامات الفاخرة",
+            "collections": "المجموعات",
+            "tags": "الوسوم",
+            "orders": "الطلبات",
+            "customers": "العملاء",
+            "restock": "إعادة التموين",
+            "inventory": "المخزون",
+            "invoices": "الفواتير",
+            "analytics": "ذكاء الأعمال",
+            "reports": "التقارير",
+            "logs": "سجلات التدقيق",
+            "activity_log": "سجل النشاط",
+            "system": "صحة النظام",
+            "notifications": "الإشعارات",
+            "announcements": "الإعلانات العامة",
+            "preferences": "التفضيلات",
+            "sections": {
+                "main": "القائمة الرئيسية",
+                "catalog": "الكتالوج والمنتجات",
+                "sales_crm": "المبيعات والعملاء",
+                "operations": "العمليات والخدمات",
+                "data_bi": "التحليلات والبيانات",
+                "configuration": "الإعدادات والنظام"
+            }
+        },
+        "notifications": {
+            "title": "مركز الإشعارات",
+            "subtitle": "إدارة تنبيهات النظام والتواصل مع العملاء.",
+            "all_notifications": "كل الإشعارات",
+            "unread": "غير مقروءة",
+            "read": "مقروءة",
+            "no_notifications": "لم يتم العثور على إشعارات.",
+            "mark_read": "تحديد كمقروء",
+            "delete": "حذف",
+            "unread_count": "لديك {count} تنبيه(ات) غير مقروءة",
+            "no_unread": "كل شيء على ما يرام!",
+            "no_notifications_desc": "لا توجد إشعارات في الوقت الحالي."
+        },
+        "header": {
+            "smart_alert": "تنبيه ذكي نشط",
+            "no_alerts": "لا توجد تنبيهات نشطة. النظام طبيعي.",
+            "inventory_health": "صحة المخزون"
+        },
+        "system": {
+            "title": "صحة وحالة النظام",
+            "subtitle": "مراقبة أداء الخادم، اتصال قاعدة البيانات، والخدمات الخارجية.",
+            "metrics": {
+                "total_products": "إجمالي المنتجات",
+                "total_customers": "إجمالي العملاء",
+                "total_orders": "إجمالي الطلبات",
+                "orders_today": "طلبات اليوم"
+            },
+            "status": {
+                "title": "حالة النظام",
+                "HEALTHY": "سليم",
+                "WARNING": "تحذير",
+                "DEGRADED": "متدهور",
+                "healthy_desc": "جميع الأنظمة تعمل بشكل طبيعي. لم يتم اكتشاف أي أخطاء حرجة في آخر 24 ساعة.",
+                "warning_desc": "النظام يواجه مشاكل بسيطة. تحقق من سجلات الأخطاء لمزيد من التفاصيل.",
+                "degraded_desc": "صحة النظام متدهورة. مطلوب اهتمام فوري."
+            },
+            "infrastructure": {
+                "title": "البنية التحتية",
+                "db_engine": "محرك قاعدة البيانات",
+                "app_server": "خادم التطبيق",
+                "orm_layer": "طبقة ORM"
+            },
+            "inventory_health": {
+                "title": "صحة المخزون",
+                "low_stock": "أصناف منخفضة المخزون",
+                "dead_stock": "أصناف مخزون راكد"
+            },
+            "error_frequency": {
+                "title": "تواتر الأخطاء",
+                "errors_24h": "الأخطاء خلال 24 ساعة الماضية",
+                "footer": "تساعد مراقبة تواتر الأخطاء في تحديد أخطاء التراجع ومشاكل مهلة واجهة برمجة التطبيقات في وقت مبكر."
+            },
+            "maintenance": {
+                "title": "النظام جاهز للإنتاج",
+                "mode": "وضع الصيانة",
+                "desc": "تشير جميع عمليات تدقيق الأداء والتحقق من صحة السلامة إلى أن المنصة تعمل بأقصى كفاءة. النسخ الاحتياطي التلقائي وفحوصات الصحة نشطة."
+            }
+        }
+    },
+    "inventory_history": {
+        "title": "سجل المخزون",
+        "subtitle": "تتبع جميع حركات المخزون عبر المبيعات والإلغاءات والتعديلات اليدوية.",
+        "filter_product": "المنتج",
+        "filter_all_products": "جميع المنتجات",
+        "filter_type": "نوع التغيير",
+        "filter_all_types": "جميع الأنواع",
+        "filter_source": "المصدر",
+        "filter_all_sources": "جميع المصادر",
+        "filter_button": "تصفية",
+        "filter_reset": "إعادة تعيين",
+        "table_date": "التاريخ والوقت",
+        "table_product": "المنتج",
+        "table_type": "النوع",
+        "table_change": "التغيير",
+        "table_source_reason": "المصدر والسبب",
+        "no_history": "لم يتم العثور على سجل مخزون يطابق الفلاتر.",
+        "types": {
+            "SALE": "بيع",
+            "CANCEL": "إلغاء",
+            "RESTOCK": "إعادة تموين",
+            "MANUAL_ADJUSTMENT": "تعديل يدوي"
+        },
+        "sources": {
+            "ORDER": "طلب",
+            "ADMIN": "مشرف",
+            "SYSTEM": "نظام"
+        }
+    }
+}
