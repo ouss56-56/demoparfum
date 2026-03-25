@@ -208,9 +208,9 @@ CREATE OR REPLACE FUNCTION create_order(
     p_wilaya_name TEXT DEFAULT NULL,
     p_wilaya_number TEXT DEFAULT NULL,
     p_notes TEXT DEFAULT NULL
-) RETURNS UUID AS $$
+) RETURNS UUID AS $func$
 DECLARE
-    v_order_id UUID;
+    v_order_id UUID := gen_random_uuid();
     v_total NUMERIC := 0;
     v_item JSONB;
     v_p_id UUID;
@@ -218,10 +218,8 @@ DECLARE
     v_weight NUMERIC;
     v_reduction NUMERIC;
 BEGIN
-    -- 1. Create the Order Record first to get v_order_id
-    -- Total price is initially 0, we will update it after calculating from items
-    v_order_id := gen_random_uuid();
-    INSERT INTO orders (id, customer_id, status, wilaya_name, wilaya_number, notes, items)
+    -- 1. Create the Order Record
+    INSERT INTO orders (id, customer_id, status, wilaya_name, wilaya_number, notes, "items")
     VALUES (v_order_id, p_customer_id, 'PENDING', p_wilaya_name, p_wilaya_number, p_notes, p_items);
 
     -- 2. Process Items, Deduct Stock, and Calculate Total
@@ -265,7 +263,7 @@ BEGIN
 
     RETURN v_order_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$func$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 5. ROW LEVEL SECURITY
 -- (Existing table RLS remains the same as previously defined)
