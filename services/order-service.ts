@@ -187,22 +187,43 @@ export const createOrder = async (input: CreateOrderInput) => {
     (revalidateTag as any)(`orders:${input.customerId}`);
     (revalidateTag as any)("orders");
 
-    // Fetch the created order for mapping
-    // We add a small delay and retry to ensure the DB state is visible (especially for some adapter/replica scenarios)
-    let order = null;
-    for (let i = 0; i < 3; i++) {
-        order = await getOrderById(orderId);
-        if (order) break;
-        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms between retries
-    }
-
-    if (!order) {
-        console.error(`[OrderService] Order ${orderId} created but could not be retrieved after retries`);
-        throw new Error("Order created but could not be retrieved");
-    }
+    // Build the order response directly from input data instead of re-querying.
+    // This avoids race conditions and dependency on the SQL function's exact behavior
+    // (e.g., whether it populates order_items or not).
+    const totalPrice = itemsWithData.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    const order: Order = {
+        id: orderId,
+        customerId: input.customerId,
+        totalPrice,
+        status: "PENDING",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        items: itemsWithData.map(item => ({
+            id: "",
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            volumeId: item.volumeId,
+            volume: item.volume,
+            product: {
+                name: productsMap.get(item.productId)?.name || "",
+                brand: productsMap.get(item.productId)?.brand || "",
+                imageUrl: productsMap.get(item.productId)?.image_url || "",
+            }
+        })),
+        customer: null,
+        shipping: null,
+        invoice: null,
+        wilayaName: input.wilayaName || null,
+        wilayaNumber: input.wilayaNumber || null,
+        amountPaid: 0,
+        paymentStatus: "UNPAID",
+        logs: [],
+    };
 
     try {
-        await notifyNewOrder(order.id, order.customer?.shopName || "Customer", order.totalPrice);
+        await notifyNewOrder(order.id, "Customer", order.totalPrice);
     } catch (e) {
         console.error("Notification error:", e);
     }

@@ -50,7 +50,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     return (
         <main className={locale === 'ar' ? 'rtl' : 'ltr'}>
             {/* ── Cinematic Hero ──── */}
-            <FragranceScroll logoUrl={settings.logo_url ?? undefined} />
+            <div style={{ marginTop: 'calc(-1 * (var(--announcement-height, 0px) + var(--navbar-height, 70px)))' }}>
+                <FragranceScroll logoUrl={settings.logo_url ?? undefined} />
+            </div>
 
             {/* ── Product Sections (server-fetched, streamed) ──── */}
             <Suspense
