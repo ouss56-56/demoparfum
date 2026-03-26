@@ -48,7 +48,7 @@ export default function AnnouncementMarquee() {
     if (!isVisible || announcements.length === 0) return null;
 
     return (
-        <div className="bg-[#1a1a1a] text-white/90 py-1 relative border-b border-white/5 overflow-hidden">
+        <div className="bg-[#1a1a1a] text-white/90 py-2 relative border-b border-white/5 overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 relative flex items-center gap-8">
                 <div className="hidden sm:flex items-center gap-2 shrink-0">
                     <Megaphone className="w-3 h-3 text-[#D4AF37]" />
@@ -57,12 +57,12 @@ export default function AnnouncementMarquee() {
                     </span>
                 </div>
                 
-                <div className="overflow-hidden flex-1 relative h-5 flex items-center">
+                <div className="overflow-hidden flex-1 relative h-6 flex items-center">
                     <div className="whitespace-nowrap flex animate-marquee hover:pause-marquee">
                         {announcements.map((ann, i) => (
                             <div key={`${ann.id}-${i}`} className="mx-8 flex items-center gap-4">
                                 <span className="text-[#D4AF37] opacity-40 text-[10px]">✦</span>
-                                <span className="text-[11px] sm:text-xs font-light tracking-wide flex items-center gap-3">
+                                <span className="text-xs sm:text-[13px] font-light tracking-wide flex items-center gap-3">
                                     <span className="text-white font-medium">{ann.title}</span>
                                     <span className="text-white/60">{ann.message}</span>
                                 </span>
@@ -94,7 +94,7 @@ export default function AnnouncementMarquee() {
                     100% { transform: translateX(-100%); }
                 }
                 .animate-marquee {
-                    animation: marquee 35s linear infinite;
+                    animation: marquee 60s linear infinite;
                 }
                 .pause-marquee:hover {
                     animation-play-state: paused;
