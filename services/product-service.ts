@@ -43,7 +43,7 @@ function mapProduct(data: any): Product {
         imageUrl: imageUrl, 
         price: basePrice,
         basePrice: basePrice,
-        stock: data.stock || 0,
+        stock: data.stock_weight ?? data.stock ?? 0,
         description: data.description || "",
         status: data.status || "ACTIVE",
         createdAt: new Date(data.created_at),

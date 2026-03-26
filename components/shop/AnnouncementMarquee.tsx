@@ -5,6 +5,7 @@ import { Megaphone, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLocale } from 'next-intl';
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 export default function AnnouncementMarquee() {
     const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -67,12 +68,14 @@ export default function AnnouncementMarquee() {
                                     <span className="text-white/60">{ann.message}</span>
                                 </span>
                                 {ann.link && (
-                                    <a 
-                                        href={ann.link} 
+                                    <Link 
+                                        href={ann.link.startsWith('http') ? ann.link : `/${locale}${ann.link.startsWith('/') ? '' : '/'}${ann.link}`} 
                                         className="text-[#D4AF37] hover:text-white text-[9px] font-bold uppercase tracking-widest transition-colors"
+                                        target={ann.link.startsWith('http') ? "_blank" : undefined}
+                                        rel={ann.link.startsWith('http') ? "noopener noreferrer" : undefined}
                                     >
                                         {isRtl ? 'التفاصيل' : 'Details'}
-                                    </a>
+                                    </Link>
                                 )}
                             </div>
                         ))}
