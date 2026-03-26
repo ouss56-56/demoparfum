@@ -1,6 +1,6 @@
 import BrandClientView from "@/components/admin/BrandClientView";
 import { getTranslations } from "next-intl/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -8,27 +8,17 @@ export default async function AdminBrandsPage({ params }: { params: Promise<{ lo
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "admin.brands" });
 
-    // Fetch brands and join with products to get counts
-    // We match by brand name in the products table
-    const { data: brandsData, error } = await supabaseAdmin
-        .from("brands")
-        .select("*")
-        .order("name", { ascending: true });
+    const brandsData = await sql`SELECT * FROM brands ORDER BY name ASC`;
 
-    if (error) {
-        console.error("Brands fetch error:", error);
-    }
-
-    // Get product counts per brand
-    const { data: productCounts } = await supabaseAdmin
-        .from("products")
-        .select("brand")
-        .not("brand", "is", null);
+    // Get product counts per brand name
+    const productCounts = await sql`
+        SELECT brand, COUNT(*) as count FROM products WHERE brand IS NOT NULL GROUP BY brand
+    `;
 
     const counts: Record<string, number> = {};
-    productCounts?.forEach(p => {
+    (productCounts || []).forEach((p: any) => {
         if (p.brand) {
-            counts[p.brand] = (counts[p.brand] || 0) + 1;
+            counts[p.brand] = Number(p.count || 0);
         }
     });
 

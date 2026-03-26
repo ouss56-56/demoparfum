@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { History, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -17,22 +17,76 @@ export default async function InventoryHistoryPage({
     const t = await getTranslations({ locale, namespace: "admin.inventory_history" });
     const sParams = await searchParams;
 
-    let query = supabaseAdmin
-        .from("inventory_logs")
-        .select(`
-            *,
-            products (name, image_url)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-    if (sParams.productId) query = query.eq("product_id", sParams.productId);
-    if (sParams.changeType) query = query.eq("change_type", sParams.changeType);
-    if (sParams.source) query = query.eq("source", sParams.source);
-
-    const { data: logsData, error } = await query;
-    if (error) {
-        console.error("Inventory logs fetch error:", error);
+    // Build dynamic query with filters
+    let logsData;
+    if (sParams.productId && sParams.changeType && sParams.source) {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            WHERE il.product_id = ${sParams.productId}
+            AND il.change_type = ${sParams.changeType}
+            AND il.source = ${sParams.source}
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
+    } else if (sParams.productId && sParams.changeType) {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            WHERE il.product_id = ${sParams.productId}
+            AND il.change_type = ${sParams.changeType}
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
+    } else if (sParams.productId && sParams.source) {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            WHERE il.product_id = ${sParams.productId}
+            AND il.source = ${sParams.source}
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
+    } else if (sParams.changeType && sParams.source) {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            WHERE il.change_type = ${sParams.changeType}
+            AND il.source = ${sParams.source}
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
+    } else if (sParams.productId) {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            WHERE il.product_id = ${sParams.productId}
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
+    } else if (sParams.changeType) {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            WHERE il.change_type = ${sParams.changeType}
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
+    } else if (sParams.source) {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            WHERE il.source = ${sParams.source}
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
+    } else {
+        logsData = await sql`
+            SELECT il.*, p.name as product_name, p.image_url as product_image_url
+            FROM inventory_logs il
+            LEFT JOIN products p ON il.product_id = p.id
+            ORDER BY il.created_at DESC LIMIT 100
+        `;
     }
 
     const logs = (logsData || []).map((log: any) => ({
@@ -44,13 +98,12 @@ export default async function InventoryHistoryPage({
         reason: log.reason,
         createdAt: new Date(log.created_at),
         product: {
-            name: log.products?.name || "Unknown",
-            imageUrl: log.products?.image_url || ""
+            name: log.product_name || "Unknown",
+            imageUrl: log.product_image_url || ""
         },
     }));
 
-    const { data: productsData } = await supabaseAdmin.from("products").select("id, name").order("name");
-    const products = productsData || [];
+    const products = await sql`SELECT id, name FROM products ORDER BY name`;
 
     const formatDate = (date: Date) => {
         return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-DZ' : 'fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
@@ -95,7 +148,7 @@ export default async function InventoryHistoryPage({
                         className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none font-medium text-gray-700"
                     >
                         <option value="">{t("filter_all_products")}</option>
-                        {products.map((p: any) => (
+                        {(products || []).map((p: any) => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                     </select>

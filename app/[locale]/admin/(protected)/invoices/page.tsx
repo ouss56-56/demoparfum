@@ -1,6 +1,6 @@
 import { Search, FileText, ExternalLink } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -9,22 +9,17 @@ export default async function AdminInvoicesPage({ params }: { params: Promise<{ 
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "admin.invoices" });
 
-    // Invoices are embedded in orders in the Supabase schema as well
-    const { data: ordersWithInvoices, error } = await supabaseAdmin
-        .from("orders")
-        .select(`
-            id,
-            total_price,
-            invoice,
-            created_at,
-            customers (shop_name, name)
-        `)
-        .not("invoice", "is", null)
-        .order("created_at", { ascending: false });
-
-    if (error) {
-        console.error("Invoices fetch error:", error);
-    }
+    const ordersWithInvoices = await sql`
+        SELECT 
+            o.id,
+            o.total_price,
+            o.invoice,
+            o.created_at,
+            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers
+        FROM orders o
+        WHERE o.invoice IS NOT NULL
+        ORDER BY o.created_at DESC
+    `;
 
     const invoices = (ordersWithInvoices || []).map((order: any) => ({
         id: order.id,

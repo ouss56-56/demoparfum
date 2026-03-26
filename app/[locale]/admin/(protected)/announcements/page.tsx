@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import AnnouncementsClient from "@/components/admin/AnnouncementsClient";
 import { getTranslations } from "next-intl/server";
 
@@ -6,13 +6,13 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminAnnouncementsPage({ params }: { params: Promise<{ locale: string }> }) {
     const { locale } = await params;
-    const t = await getTranslations({ locale, namespace: "admin" }); // Assuming admin namespace covers it
+    const t = await getTranslations({ locale, namespace: "admin" });
 
-    const { data: announcements, error } = await supabaseAdmin
-        .from("notifications")
-        .select("*")
-        .eq("type", "ANNOUNCEMENT")
-        .order("created_at", { ascending: false });
+    const announcements = await sql`
+        SELECT * FROM notifications 
+        WHERE type = 'ANNOUNCEMENT' 
+        ORDER BY created_at DESC
+    `;
 
     return (
         <div className={`space-y-8 animate-in fade-in duration-500 ${locale === 'ar' ? 'rtl' : 'ltr'}`}>

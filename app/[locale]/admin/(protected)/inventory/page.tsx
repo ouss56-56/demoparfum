@@ -2,7 +2,7 @@ import { PackageSearch, History } from "lucide-react";
 import Link from "next/link";
 import InventoryManagerClient from "@/components/admin/InventoryManagerClient";
 import { getTranslations } from "next-intl/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,20 +10,18 @@ export default async function AdminInventoryPage({ params }: { params: Promise<{
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "admin.inventory" });
 
-    const { data: productsData, error } = await supabaseAdmin
-        .from("products")
-        .select("*, categories(name)")
-        .order("name", { ascending: true });
-
-    if (error) {
-        console.error("Inventory products fetch error:", error);
-    }
+    const productsData = await sql`
+        SELECT p.*, c.name as category_name
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        ORDER BY p.name ASC
+    `;
 
     const products = (productsData || []).map((p: any) => ({
         id: p.id,
         name: p.name,
         brand: p.brand,
-        categoryName: p.categories?.name || "",
+        categoryName: p.category_name || "",
         stockWeight: Number(p.stock_weight || 0),
         lowStockThreshold: Number(p.low_stock_threshold || 500),
         status: p.status,

@@ -1,8 +1,8 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { createCategorySchema, formatZodErrors } from "@/lib/validation"; // Reusing category schema as it's just name/desc
+import { createCategorySchema, formatZodErrors } from "@/lib/validation";
 import { logEvent } from "@/lib/logger";
 
 export async function createBrand(formData: FormData) {
@@ -17,17 +17,11 @@ export async function createBrand(formData: FormData) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
     try {
-        const { data: brand, error } = await supabaseAdmin
-            .from("brands")
-            .insert({
-                name,
-                slug,
-                description,
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
+        const [brand] = await sql`
+            INSERT INTO brands (name, slug, description)
+            VALUES (${name}, ${slug}, ${description})
+            RETURNING *
+        `;
 
         await logEvent("BRAND_CREATED", brand.id, `Brand "${name}" created`);
         revalidatePath("/", "layout");
@@ -48,15 +42,10 @@ export async function updateBrand(id: string, formData: FormData) {
     }
 
     try {
-        const { error } = await supabaseAdmin
-            .from("brands")
-            .update({
-                name,
-                description,
-            })
-            .eq("id", id);
-
-        if (error) throw error;
+        await sql`
+            UPDATE brands SET name = ${name}, description = ${description}
+            WHERE id = ${id}
+        `;
 
         revalidatePath("/", "layout");
         return { success: true };
@@ -69,19 +58,8 @@ export async function updateBrand(id: string, formData: FormData) {
 export async function deleteBrand(id: string) {
     try {
         // Nullify brand references in products before deleting
-        const { error: updateError } = await supabaseAdmin
-            .from("products")
-            .update({ brand_id: null, brand: null })
-            .eq("brand_id", id);
-
-        if (updateError) throw updateError;
-
-        const { error: deleteError } = await supabaseAdmin
-            .from("brands")
-            .delete()
-            .eq("id", id);
-
-        if (deleteError) throw deleteError;
+        await sql`UPDATE products SET brand_id = NULL, brand = NULL WHERE brand_id = ${id}`;
+        await sql`DELETE FROM brands WHERE id = ${id}`;
 
         await logEvent("BRAND_DELETED", id, `Brand ${id} deleted`);
         revalidatePath("/", "layout");

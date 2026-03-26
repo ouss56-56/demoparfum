@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { logAdminAction } from "@/services/audit-service";
 import { cookies } from "next/headers";
@@ -19,12 +19,7 @@ async function getAdminId() {
 
 export async function toggleCustomerStatus(customerId: string, newStatus: "ACTIVE" | "SUSPENDED") {
     try {
-        const { error } = await supabaseAdmin
-            .from("customers")
-            .update({ status: newStatus })
-            .eq("id", customerId);
-
-        if (error) throw error;
+        await sql`UPDATE customers SET status = ${newStatus} WHERE id = ${customerId}`;
 
         const adminId = await getAdminId();
         if (adminId) {
@@ -48,17 +43,8 @@ export async function toggleCustomerStatus(customerId: string, newStatus: "ACTIV
 export async function deleteCustomer(customerId: string) {
     try {
         // First, nullify customer_id on any associated orders to avoid FK constraint errors
-        await supabaseAdmin
-            .from("orders")
-            .update({ customer_id: null })
-            .eq("customer_id", customerId);
-
-        const { error } = await supabaseAdmin
-            .from("customers")
-            .delete()
-            .eq("id", customerId);
-
-        if (error) throw error;
+        await sql`UPDATE orders SET customer_id = NULL WHERE customer_id = ${customerId}`;
+        await sql`DELETE FROM customers WHERE id = ${customerId}`;
         
         const adminId = await getAdminId();
         if (adminId) {

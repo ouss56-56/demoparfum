@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import ProductClientView from "@/components/admin/ProductClientView";
 import RealtimeReloader from "@/components/admin/RealtimeReloader";
 import { getTranslations } from "next-intl/server";
@@ -9,19 +9,17 @@ export default async function AdminProductsPage({ params }: { params: Promise<{ 
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "admin.products" });
 
-    // Fetch data from Supabase
-    const [
-        { data: productsData },
-        { data: categories },
-        { data: brands },
-        { data: collections },
-        { data: tags }
-    ] = await Promise.all([
-        supabaseAdmin.from("products").select("*, category:categories(name), brand_rel:brands(name)").order("created_at", { ascending: false }),
-        supabaseAdmin.from("categories").select("*").order("name", { ascending: true }),
-        supabaseAdmin.from("brands").select("*").order("name", { ascending: true }),
-        supabaseAdmin.from("collections").select("*").order("name", { ascending: true }),
-        supabaseAdmin.from("tags").select("*").order("name", { ascending: true })
+    // Fetch data via direct SQL
+    const [productsData, categories, brands, collections, tags] = await Promise.all([
+        sql`SELECT p.*, c.name as category_name, b.name as brand_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN brands b ON p.brand_id = b.id
+            ORDER BY p.created_at DESC`,
+        sql`SELECT * FROM categories ORDER BY name ASC`,
+        sql`SELECT * FROM brands ORDER BY name ASC`,
+        sql`SELECT * FROM collections ORDER BY name ASC`,
+        sql`SELECT * FROM tags ORDER BY name ASC`,
     ]);
 
     const serializedProducts = (productsData || []).map((p: any) => ({
@@ -32,22 +30,20 @@ export default async function AdminProductsPage({ params }: { params: Promise<{ 
         slug: p.slug,
         description: p.description,
         categoryId: p.category_id,
-        imageUrl: p.image_url || p.image, // Fallback to p.image if p.image_url is missing
+        imageUrl: p.image_url || p.image,
         basePrice: Number(p.base_price),
         stockWeight: Number(p.stock_weight || 0),
         lowStockThreshold: p.low_stock_threshold,
         status: p.status,
         createdAt: new Date(p.created_at),
         updatedAt: new Date(p.updated_at),
-        category: p.category || (p.category_id ? { id: p.category_id, name: "..." } : null),
-        brandName: p.brand_rel?.name || p.brand,
+        category: p.category_name ? { id: p.category_id, name: p.category_name } : null,
+        brandName: p.brand_name || p.brand,
         collections: (p.collection_ids || []).map((cid: string) => ({ collection: { id: cid } })),
         tags: (p.tag_ids || []).map((tid: string) => ({ tag: { id: tid } })),
         volumes: p.volumes || [],
         images: p.images || [],
     }));
-
-    console.log(`[AdminProductsPage] Map check: ${serializedProducts[0]?.name} -> ${serializedProducts[0]?.imageUrl}`);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">

@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { logEvent } from "@/lib/logger";
 
@@ -25,8 +25,6 @@ export async function createProduct(formData: FormData) {
         status: (formData.get("status") as string) || "ACTIVE",
     };
 
-    console.log(`[ServerAction:createProduct] Creating product: ${data.name}, Image: ${data.image_url}`);
-
     const collectionIds = (formData.getAll("collectionIds") as string[]).filter(Boolean);
     const tagIds = (formData.getAll("tagIds") as string[]).filter(Boolean);
 
@@ -42,30 +40,25 @@ export async function createProduct(formData: FormData) {
 
     // Sync brand name from brand_id
     if (data.brand_id) {
-        const { data: brandData } = await supabaseAdmin.from("brands").select("name").eq("id", data.brand_id).single();
+        const [brandData] = await sql`SELECT name FROM brands WHERE id = ${data.brand_id} LIMIT 1`;
         if (brandData) {
             data.brand = brandData.name;
         }
     }
 
     try {
-        const { data: product, error } = await supabaseAdmin
-            .from("products")
-            .insert(data)
-            .select()
-            .single();
-
-        if (error) throw error;
+        const [product] = await sql`
+            INSERT INTO products (name, slug, brand_id, brand, description, category_id, image_url, base_price, purchase_price, stock_weight, low_stock_threshold, status, collection_ids, tag_ids)
+            VALUES (${data.name}, ${data.slug}, ${data.brand_id}, ${data.brand || null}, ${data.description}, ${data.category_id}, ${data.image_url}, ${data.base_price}, ${data.purchase_price}, ${data.stock_weight}, ${data.low_stock_threshold}, ${data.status}, ${data.collection_ids}, ${data.tag_ids})
+            RETURNING *
+        `;
 
         // Initial stock log
         if (data.stock_weight > 0) {
-            await supabaseAdmin.from("inventory_logs").insert({
-                product_id: product.id,
-                change_type: "INITIAL_STOCK",
-                quantity: data.stock_weight,
-                source: "ADMIN",
-                reason: "Initial stock on product creation",
-            });
+            await sql`
+                INSERT INTO inventory_logs (product_id, change_type, quantity, source, reason)
+                VALUES (${product.id}, 'INITIAL_STOCK', ${data.stock_weight}, 'ADMIN', 'Initial stock on product creation')
+            `;
         }
 
         await logEvent("PRODUCT_CREATED", product.id, `Product "${data.name}" created with ${data.stock_weight}g`);
@@ -92,14 +85,11 @@ export async function updateProduct(id: string, formData: FormData) {
         stock_weight: Number(formData.get("stockWeight")),
         low_stock_threshold: Number(formData.get("lowStockThreshold") || 500),
         status: (formData.get("status") as string) || "ACTIVE",
-        updated_at: new Date().toISOString(),
     };
-
-    console.log(`[ServerAction:updateProduct] Updating product ID: ${id}, New Image: ${data.image_url}`);
 
     // Sync brand name from brand_id
     if (data.brand_id) {
-        const { data: brandData } = await supabaseAdmin.from("brands").select("name").eq("id", data.brand_id).single();
+        const [brandData] = await sql`SELECT name FROM brands WHERE id = ${data.brand_id} LIMIT 1`;
         if (brandData) {
             data.brand = brandData.name;
         }
@@ -108,36 +98,36 @@ export async function updateProduct(id: string, formData: FormData) {
     const collectionIds = (formData.getAll("collectionIds") as string[]).filter(Boolean);
     const tagIds = (formData.getAll("tagIds") as string[]).filter(Boolean);
 
-    data.collection_ids = collectionIds;
-    data.tag_ids = tagIds;
-
     try {
         // Fetch old stock for logging
-        const { data: oldData, error: fetchError } = await supabaseAdmin
-            .from("products")
-            .select("stock_weight, name")
-            .eq("id", id)
-            .single();
-
-        if (fetchError) throw fetchError;
+        const [oldData] = await sql`SELECT stock_weight, name FROM products WHERE id = ${id} LIMIT 1`;
         const oldStock = oldData?.stock_weight || 0;
 
-        const { error: updateError } = await supabaseAdmin
-            .from("products")
-            .update(data)
-            .eq("id", id);
-
-        if (updateError) throw updateError;
+        await sql`
+            UPDATE products SET
+                name = ${data.name},
+                brand_id = ${data.brand_id},
+                brand = ${data.brand || null},
+                description = ${data.description},
+                category_id = ${data.category_id},
+                image_url = ${data.image_url},
+                base_price = ${data.base_price},
+                purchase_price = ${data.purchase_price},
+                stock_weight = ${data.stock_weight},
+                low_stock_threshold = ${data.low_stock_threshold},
+                status = ${data.status},
+                collection_ids = ${collectionIds},
+                tag_ids = ${tagIds},
+                updated_at = NOW()
+            WHERE id = ${id}
+        `;
 
         // Log stock adjustment if changed
         if (data.stock_weight !== undefined && data.stock_weight !== oldStock) {
-            await supabaseAdmin.from("inventory_logs").insert({
-                product_id: id,
-                change_type: "ADJUSTMENT",
-                quantity: data.stock_weight - oldStock,
-                source: "ADMIN",
-                reason: `Manual adjustment from ${oldStock}g to ${data.stock_weight}g`,
-            });
+            await sql`
+                INSERT INTO inventory_logs (product_id, change_type, quantity, source, reason)
+                VALUES (${id}, 'ADJUSTMENT', ${data.stock_weight - oldStock}, 'ADMIN', ${`Manual adjustment from ${oldStock}g to ${data.stock_weight}g`})
+            `;
         }
 
         await logEvent("PRODUCT_UPDATED", id, `Product "${data.name}" updated (Stock: ${oldStock}g -> ${data.stock_weight}g)`);
@@ -154,25 +144,14 @@ export async function updateProduct(id: string, formData: FormData) {
 
 export async function deleteProduct(id: string) {
     try {
-        // Check for orders referencing this product via order_items table
-        const { data: referencedItems, error: checkError } = await supabaseAdmin
-            .from("order_items")
-            .select("order_id")
-            .eq('product_id', id)
-            .limit(1);
-
-        if (checkError) throw checkError;
+        // Check for orders referencing this product
+        const referencedItems = await sql`SELECT order_id FROM order_items WHERE product_id = ${id} LIMIT 1`;
 
         if (referencedItems && referencedItems.length > 0) {
             return { success: false, error: "Cannot delete product. It is referenced in existing orders." };
         }
 
-        const { error: deleteError } = await supabaseAdmin
-            .from("products")
-            .delete()
-            .eq("id", id);
-
-        if (deleteError) throw deleteError;
+        await sql`DELETE FROM products WHERE id = ${id}`;
 
         await logEvent("PRODUCT_DELETED", id, `Product ${id} deleted`);
         revalidatePath("/admin/products");

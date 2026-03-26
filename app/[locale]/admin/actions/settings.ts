@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { logEvent } from "@/lib/logger";
 
@@ -11,23 +11,22 @@ export async function updateSiteSettingsAction(formData: FormData) {
     const contact_email = formData.get("contact_email") as string;
     const store_address = formData.get("store_address") as string;
     const logo_url = formData.get("logo_url") as string;
+    const settingsId = id || "00000000-0000-0000-0000-000000000000";
 
     try {
-        const { error } = await supabaseAdmin
-            .from("site_settings")
-            .upsert({
-                id: id || "00000000-0000-0000-0000-000000000000",
-                whatsapp_number,
-                facebook_page,
-                contact_email,
-                store_address,
-                logo_url,
-                updated_at: new Date().toISOString()
-            });
+        await sql`
+            INSERT INTO site_settings (id, whatsapp_number, facebook_page, contact_email, store_address, logo_url, updated_at)
+            VALUES (${settingsId}, ${whatsapp_number}, ${facebook_page}, ${contact_email}, ${store_address}, ${logo_url}, NOW())
+            ON CONFLICT (id) DO UPDATE SET
+                whatsapp_number = ${whatsapp_number},
+                facebook_page = ${facebook_page},
+                contact_email = ${contact_email},
+                store_address = ${store_address},
+                logo_url = ${logo_url},
+                updated_at = NOW()
+        `;
 
-        if (error) throw error;
-
-        await logEvent("SITESETTINGS_UPDATED", id, "Global site settings updated by admin");
+        await logEvent("SITESETTINGS_UPDATED", settingsId, "Global site settings updated by admin");
         revalidatePath("/", "layout");
         return { success: true };
     } catch (error: any) {

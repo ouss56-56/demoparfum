@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createCategorySchema, formatZodErrors } from "@/lib/validation";
 import { logEvent } from "@/lib/logger";
@@ -9,7 +9,6 @@ export async function createCategory(formData: FormData) {
     const name = formData.get("name") as string;
     const description = (formData.get("description") as string) || "";
 
-    // ── Zod Validation ──────────────────────────────────────────────────
     const parsed = createCategorySchema.safeParse({ name, description });
     if (!parsed.success) {
         return { success: false, error: formatZodErrors(parsed.error) };
@@ -18,17 +17,11 @@ export async function createCategory(formData: FormData) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
     try {
-        const { data: category, error } = await supabaseAdmin
-            .from("categories")
-            .insert({
-                name,
-                slug,
-                description,
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
+        const [category] = await sql`
+            INSERT INTO categories (name, slug, description)
+            VALUES (${name}, ${slug}, ${description})
+            RETURNING *
+        `;
 
         await logEvent("CATEGORY_CREATED", category.id, `Category "${name}" created`);
         revalidatePath("/admin/categories");
@@ -51,16 +44,13 @@ export async function updateCategory(id: string, formData: FormData) {
     }
 
     try {
-        const { error } = await supabaseAdmin
-            .from("categories")
-            .update({
-                name,
-                description,
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", id);
-
-        if (error) throw error;
+        await sql`
+            UPDATE categories SET
+                name = ${name},
+                description = ${description},
+                updated_at = NOW()
+            WHERE id = ${id}
+        `;
 
         revalidatePath("/admin/categories");
         revalidatePath("/admin/products");
@@ -81,19 +71,8 @@ export async function updateCategory(id: string, formData: FormData) {
 export async function deleteCategory(id: string) {
     try {
         // Nullify category references in products before deleting
-        const { error: updateError } = await supabaseAdmin
-            .from("products")
-            .update({ category_id: null })
-            .eq("category_id", id);
-
-        if (updateError) throw updateError;
-
-        const { error: deleteError } = await supabaseAdmin
-            .from("categories")
-            .delete()
-            .eq("id", id);
-
-        if (deleteError) throw deleteError;
+        await sql`UPDATE products SET category_id = NULL WHERE category_id = ${id}`;
+        await sql`DELETE FROM categories WHERE id = ${id}`;
 
         await logEvent("CATEGORY_DELETED", id, `Category ${id} deleted`);
         revalidatePath("/admin/categories");

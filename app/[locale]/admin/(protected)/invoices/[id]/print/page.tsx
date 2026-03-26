@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { ArrowLeft, Printer } from "lucide-react";
 import Link from "next/link";
 import InvoiceView from "@/components/shop/InvoiceView";
@@ -8,28 +8,36 @@ export const dynamic = "force-dynamic";
 export default async function InvoicePrintPage({ params }: { params: Promise<{ id: string, locale: string }> }) {
     const { id, locale } = await params;
     
-    // Fetch order with embedded invoice and customer details
-    const { data: orderData, error } = await supabaseAdmin
-        .from("orders")
-        .select(`
-            *,
-            customers (*),
-            items:order_items(
-                *,
-                product:products(*)
-            )
-        `)
-        .eq("id", id)
-        .single();
+    // Fetch order with embedded invoice and customer details via direct SQL
+    const [orderData] = await sql`
+        SELECT 
+            o.*,
+            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
+            (
+                SELECT json_agg(json_build_object(
+                    'id', oi.id,
+                    'product_id', oi.product_id,
+                    'quantity', oi.quantity,
+                    'price', oi.price,
+                    'volume_id', oi.volume_id,
+                    'volume_data', oi.volume_data,
+                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                ))
+                FROM order_items oi WHERE oi.order_id = o.id
+            ) as items
+        FROM orders o
+        WHERE o.id = ${id}
+        LIMIT 1
+    `;
     
-    if (error || !orderData || !orderData.invoice) {
+    if (!orderData || !orderData.invoice) {
         return <div className="p-8">Invoice not found.</div>;
     }
 
     const customer = orderData.customers || { shop_name: "Unknown", name: "", address: "", wilaya: "", phone: "" };
 
     const items: any[] = (orderData.items || []).map((item: any) => {
-        const prod = Array.isArray(item.product) ? item.product[0] : item.product;
+        const prod = item.product;
         return {
             id: item.product_id,
             quantity: item.quantity,
@@ -65,7 +73,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <div className="min-h-screen bg-gray-50 print:bg-white p-4 sm:p-12">
             {/* Screen Header (Hidden on Print) */}
             <div className="max-w-4xl mx-auto mb-8 flex items-center justify-between border-b border-gray-100 pb-4 print:hidden">
-                <Link href={`/${orderData.locale || locale}/admin/orders/${invoice.orderId}`} className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors font-bold">
+                <Link href={`/${locale}/admin/orders/${invoice.orderId}`} className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors font-bold">
                     <ArrowLeft className="w-4 h-4" /> Back to Order
                 </Link>
                 <div className="flex gap-3">

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { verifyJwtToken } from "@/lib/auth";
 import { updateCustomer } from "@/services/customer-service";
 import { revalidatePath } from "next/cache";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function updateMerchantProfile(formData: FormData) {
@@ -27,18 +27,12 @@ export async function updateMerchantProfile(formData: FormData) {
         const shopName = formData.get("shopName") as string;
         const currentPassword = formData.get("currentPassword") as string;
         const newPassword = formData.get("newPassword") as string;
-        
-        // This assumes they are not changing Wilaya/Commune in this simple version, 
-        // to avoid complex select widgets. If needed, we can expand later.
         const address = formData.get("address") as string;
 
         if (currentPassword && newPassword) {
-            // They want to update their password
-            const { data: customer } = await supabaseAdmin
-                .from("customers")
-                .select("password_hash")
-                .eq("id", customerId)
-                .single();
+            const [customer] = await sql`
+                SELECT password_hash FROM customers WHERE id = ${customerId} LIMIT 1
+            `;
 
             if (!customer || !customer.password_hash) {
                 return { success: false, error: "Account error: cannot change password" };
@@ -51,10 +45,9 @@ export async function updateMerchantProfile(formData: FormData) {
 
             const hashedNewPassword = await bcrypt.hash(newPassword, 10);
             
-            await supabaseAdmin
-                .from("customers")
-                .update({ password_hash: hashedNewPassword })
-                .eq("id", customerId);
+            await sql`
+                UPDATE customers SET password_hash = ${hashedNewPassword} WHERE id = ${customerId}
+            `;
         }
 
         // Update profile

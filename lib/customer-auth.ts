@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { verifyJwtToken } from "./auth";
-import { supabaseAdmin } from "./supabase-admin";
+import { sql } from "@/lib/db";
 
 export async function getCustomerSession() {
     const cookieStore = await cookies();
@@ -14,13 +14,11 @@ export async function getCustomerSession() {
             return null;
         }
 
-        const { data: customer, error } = await supabaseAdmin
-            .from('customers')
-            .select('*')
-            .eq('id', payload.sub as string)
-            .single();
+        const [customer] = await sql`
+            SELECT * FROM customers WHERE id = ${payload.sub as string} LIMIT 1
+        `;
 
-        if (error || !customer) return null;
+        if (!customer) return null;
 
         if (customer.status === "SUSPENDED") {
             return null;

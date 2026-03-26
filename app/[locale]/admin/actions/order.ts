@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { updateOrderStatus } from "@/services/order-service";
 import { createInvoice } from "@/services/invoice-service";
@@ -23,17 +23,11 @@ async function getAdminId() {
 
 export async function cancelOrderAction(orderId: string) {
     try {
-        // Authenticate user
         const customer = await requireCustomerSession();
         
-        // Fetch order to verify ownership and status
-        const { data: order, error } = await supabaseAdmin
-            .from("orders")
-            .select("*")
-            .eq("id", orderId)
-            .single();
+        const [order] = await sql`SELECT * FROM orders WHERE id = ${orderId} LIMIT 1`;
 
-        if (error || !order) {
+        if (!order) {
             return { success: false, error: "Order not found" };
         }
 
@@ -41,12 +35,10 @@ export async function cancelOrderAction(orderId: string) {
             return { success: false, error: "Unauthorized" };
         }
 
-        // Only PENDING orders can be cancelled by user
         if (order.status !== OrderStatus.PENDING) {
             return { success: false, error: "Only pending orders can be cancelled." };
         }
 
-        // Perform cancellation
         await updateOrderStatus(orderId, OrderStatus.CANCELLED, "CUSTOMER", "Cancelled by user via account dashboard.");
 
         revalidatePath(`/account/orders/${orderId}`);
@@ -89,13 +81,9 @@ export async function adminUpdateOrderStatus(orderId: string, status: string) {
 
 export async function updateOrderPayment(orderId: string, amountPaid: number) {
     try {
-        const { data: order, error } = await supabaseAdmin
-            .from("orders")
-            .select("total_price")
-            .eq("id", orderId)
-            .single();
+        const [order] = await sql`SELECT total_price FROM orders WHERE id = ${orderId} LIMIT 1`;
 
-        if (error || !order) throw new Error("Order not found");
+        if (!order) throw new Error("Order not found");
 
         const totalAmount = Number(order.total_price);
         let paymentStatus: "PAID" | "PARTIAL" | "UNPAID" = "UNPAID";
@@ -106,16 +94,13 @@ export async function updateOrderPayment(orderId: string, amountPaid: number) {
             paymentStatus = "PARTIAL";
         }
 
-        const { error: updateError } = await supabaseAdmin
-            .from("orders")
-            .update({
-                amount_paid: amountPaid,
-                payment_status: paymentStatus,
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", orderId);
-
-        if (updateError) throw updateError;
+        await sql`
+            UPDATE orders SET
+                amount_paid = ${amountPaid},
+                payment_status = ${paymentStatus},
+                updated_at = NOW()
+            WHERE id = ${orderId}
+        `;
 
         const adminId = await getAdminId();
         if (adminId) {
@@ -152,10 +137,8 @@ export async function generateInvoiceAction(orderId: string, amount: number) {
 export async function deleteOrderAction(orderId: string) {
     try {
         // First delete order_items to avoid foreign key constraint errors
-        await supabaseAdmin.from("order_items").delete().eq("order_id", orderId);
-        
-        const { error } = await supabaseAdmin.from("orders").delete().eq("id", orderId);
-        if (error) throw error;
+        await sql`DELETE FROM order_items WHERE order_id = ${orderId}`;
+        await sql`DELETE FROM orders WHERE id = ${orderId}`;
         
         const adminId = await getAdminId();
         if (adminId) {

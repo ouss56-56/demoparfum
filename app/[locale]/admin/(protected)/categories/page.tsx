@@ -1,6 +1,6 @@
 import CategoryClientView from "@/components/admin/CategoryClientView";
 import { getTranslations } from "next-intl/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -8,23 +8,16 @@ export default async function AdminCategoriesPage({ params }: { params: Promise<
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "admin.categories" });
 
-    // Fetch categories and join with products to get counts
-    // Note: To get counts efficiently in Supabase, we can use a nested select or a separate query
-    const { data: categoriesData, error } = await supabaseAdmin
-        .from("categories")
-        .select(`
-            *,
-            products (id)
-        `)
-        .order("name", { ascending: true });
-
-    if (error) {
-        console.error("Categories fetch error:", error);
-    }
+    const categoriesData = await sql`
+        SELECT c.*, 
+            (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id) as product_count
+        FROM categories c
+        ORDER BY c.name ASC
+    `;
 
     const categories = (categoriesData || []).map((cat: any) => ({
         ...cat,
-        _count: { products: cat.products?.length || 0 }
+        _count: { products: Number(cat.product_count || 0) }
     }));
 
     return (
