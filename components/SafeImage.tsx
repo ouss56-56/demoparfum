@@ -53,6 +53,7 @@ export default function SafeImage({
                 loading={priority ? undefined : "lazy"}
                 priority={priority}
                 sizes={sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
+                unoptimized={true}
             />
         );
     }
@@ -68,6 +69,7 @@ export default function SafeImage({
             loading={priority ? undefined : "lazy"}
             priority={priority}
             sizes={sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
+            unoptimized={true}
         />
     );
 }

@@ -33,7 +33,7 @@ export default async function AccountLayout({ children, params }: Props) {
     ];
 
     return (
-        <div className={`min-h-screen bg-[#FDFBF7] pt-28 pb-12 ${isRtl ? 'rtl' : 'ltr'}`}>
+        <div className={`min-h-screen bg-[#FDFBF7] pt-8 pb-12 ${isRtl ? 'rtl' : 'ltr'}`}>
             <div className="max-w-7xl mx-auto px-6">
                 <div className={`grid grid-cols-1 lg:grid-cols-4 gap-8 ${isRtl ? 'lg:flex lg:flex-row-reverse' : ''}`}>
                     {/* Sidebar */}

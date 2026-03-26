@@ -49,7 +49,7 @@ export default function AnnouncementMarquee() {
     if (!isVisible || announcements.length === 0) return null;
 
     return (
-        <div className="bg-[#1a1a1a] text-white/90 py-2 relative border-b border-white/5 overflow-hidden">
+        <div className="bg-[#1a1a1a] text-white/90 py-3 relative border-b border-white/5 overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 relative flex items-center gap-8">
                 <div className="hidden sm:flex items-center gap-2 shrink-0">
                     <Megaphone className="w-3 h-3 text-[#D4AF37]" />
@@ -97,7 +97,7 @@ export default function AnnouncementMarquee() {
                     100% { transform: translateX(-100%); }
                 }
                 .animate-marquee {
-                    animation: marquee 60s linear infinite;
+                    animation: marquee 85s linear infinite;
                 }
                 .pause-marquee:hover {
                     animation-play-state: paused;

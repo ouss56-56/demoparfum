@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 export default function Hero() {
     const t = useTranslations("home");
     return (
-        <section className="relative h-screen flex items-center justify-center overflow-hidden bg-black">
+        <section className="relative h-screen flex items-center justify-center overflow-hidden bg-black -mt-[116px]">
             {/* Fallback for background video - using a luxury image for now */}
             <div
                 className="absolute inset-0 z-0 opacity-60"

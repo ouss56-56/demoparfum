@@ -196,13 +196,11 @@ export default function ProductClientView({
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 relative shrink-0">
-                                                <img
-                                                    src={product.imageUrl || "/images/placeholder-perfume.svg"}
+                                                <SafeImage
+                                                    src={product.imageUrl || ""}
                                                     alt={product.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = "/images/placeholder-perfume.svg";
-                                                    }}
+                                                    fill
+                                                    className="object-cover"
                                                 />
                                             </div>
                                                 <div className="flex flex-col">

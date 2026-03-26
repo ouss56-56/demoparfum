@@ -166,11 +166,10 @@ export const createOrder = async (input: CreateOrderInput) => {
     });
 
     // Call Supabase RPC for atomic transaction via direct SQL
-    const JSONItems = JSON.stringify(itemsWithData);
     const [result] = await sql`
         SELECT create_order(
             ${input.customerId}::UUID, 
-            ${JSONItems}::JSONB, 
+            ${sql.json(itemsWithData)}, 
             ${input.wilayaName || null}, 
             ${input.wilayaNumber || null}, 
             ${input.notes || "Order placed successfully."}

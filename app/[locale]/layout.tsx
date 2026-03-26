@@ -68,7 +68,7 @@ export default async function RootLayout(props: {
                             <AnnouncementMarquee />
                             <Navbar customerName={customer?.name} settings={settings} />
                         </header>
-                        <main className="flex-1">
+                        <main className="flex-1 pt-[116px]">
                             {children}
                         </main>
                         <Footer settings={settings} />

@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// WORKAROUND: If DNS resolution fails for 'aws-1-eu-west-1.pooler.supabase.com', 
+// use a hardcoded IP (e.g. 54.247.26.119) or resolve using 8.8.8.8.
 const sql = postgres(process.env.DATABASE_URL, { ssl: "require" });
 
 function slugify(text) {
@@ -19,6 +21,13 @@ function slugify(text) {
 async function generateData() {
     try {
         console.log("Starting Dummy Data Generation...");
+        
+        console.log("Wiping existing catalog products and orders to establish a clean slate...");
+        await sql`DELETE FROM order_items`;
+        await sql`DELETE FROM orders`;
+        await sql`DELETE FROM inventory_logs`;
+        await sql`DELETE FROM inventory_history`;
+        await sql`DELETE FROM products`;
 
         // 1. Categories
         console.log("Generating 10 Categories...");
