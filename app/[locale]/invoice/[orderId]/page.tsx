@@ -74,7 +74,7 @@ export default async function InvoicePage({
                             <p className="font-bold text-gray-900 text-lg">{order.customer?.shopName || order.customer?.name}</p>
                             <p className="text-sm text-gray-600">{order.customer?.phone}</p>
                             <p className="text-sm text-gray-600 leading-relaxed">
-                                {order.shippingAddress || order.customer?.address}<br />
+                                {order.customer?.address}<br />
                                 {order.wilayaName ? `${order.wilayaNumber} - ${order.wilayaName}` : order.customer?.wilaya}
                             </p>
                         </div>
