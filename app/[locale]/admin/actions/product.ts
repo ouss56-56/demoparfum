@@ -66,6 +66,9 @@ export async function createProduct(formData: FormData) {
         revalidatePath("/catalog");
         revalidatePath("/");
         (revalidateTag as any)("products");
+        (revalidateTag as any)("featured-products");
+        (revalidateTag as any)("new-arrivals");
+        (revalidateTag as any)("best-sellers");
         return { success: true };
     } catch (error) {
         console.error("Create product error:", error);
@@ -135,6 +138,9 @@ export async function updateProduct(id: string, formData: FormData) {
         revalidatePath("/catalog");
         revalidatePath("/");
         (revalidateTag as any)("products");
+        (revalidateTag as any)("featured-products");
+        (revalidateTag as any)("new-arrivals");
+        (revalidateTag as any)("best-sellers");
         return { success: true };
     } catch (error) {
         console.error("Update product error:", error);
@@ -156,7 +162,11 @@ export async function deleteProduct(id: string) {
         await logEvent("PRODUCT_DELETED", id, `Product ${id} deleted`);
         revalidatePath("/admin/products");
         revalidatePath("/catalog");
+        revalidatePath("/");
         (revalidateTag as any)("products");
+        (revalidateTag as any)("featured-products");
+        (revalidateTag as any)("new-arrivals");
+        (revalidateTag as any)("best-sellers");
         return { success: true };
     } catch (error) {
         console.error("Delete product error:", error);

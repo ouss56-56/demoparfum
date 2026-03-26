@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react";
+import { ShoppingBag, ArrowRight, ArrowLeft, Download } from "lucide-react";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useTranslations, useLocale } from "next-intl";
 
@@ -96,11 +96,24 @@ export default function RealtimeOrderList({ initialOrders, customerId }: Realtim
                                         {t(`status.${order.status}`)}
                                     </span>
                                 </div>
-                                {locale === "ar" ? (
-                                    <ArrowLeft className="w-4 h-4 text-gray-300 group-hover:text-primary group-hover:-translate-x-1 transition-all" />
-                                ) : (
-                                    <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {order.status === "DELIVERED" || order.status === "SHIPPED" ? (
+                                        <a 
+                                            href={`/${locale}/invoice/${order.id}`} 
+                                            target="_blank"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                                            title="Download Invoice"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </a>
+                                    ) : null}
+                                    {locale === "ar" ? (
+                                        <ArrowLeft className="w-4 h-4 text-gray-300 group-hover:text-primary group-hover:-translate-x-1 transition-all" />
+                                    ) : (
+                                        <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                    )}
+                                </div>
                             </div>
                         </Link>
                     </motion.div>

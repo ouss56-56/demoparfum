@@ -36,7 +36,11 @@ export default function Navbar({ customerName, settings }: Readonly<NavbarProps 
     const navRef = useRef<HTMLElement>(null);
     const { totalQuantity, setIsCartOpen } = useCart();
 
-    const isHeroPage = pathname === `/${locale}` || pathname === `/${locale}/`;
+    const isHeroPage = pathname === `/${locale}` || pathname === `/${locale}/` || pathname === '/';
+    
+    useEffect(() => {
+        console.log("[Navbar] Current path:", pathname, "Locale:", locale, "isHero:", isHeroPage);
+    }, [pathname, locale, isHeroPage]);
 
     useEffect(() => {
         const handleScroll = () => {

@@ -176,7 +176,13 @@ export const createOrder = async (input: CreateOrderInput) => {
         ) as order_id
     `;
 
+    if (!result || !result.order_id) {
+        console.error("[OrderService] RPC create_order returned invalid result:", result);
+        throw new Error("Critical: Database failed to create order record.");
+    }
+
     const orderId = result.order_id;
+    console.log("[OrderService] Order created successfully with ID:", orderId);
 
     (revalidateTag as any)(`orders:${input.customerId}`);
     (revalidateTag as any)("orders");
@@ -394,6 +400,7 @@ export const updateOrderStatus = async (orderId: string, status: string, changed
     if (!finalOrder) throw new Error("Order update returned no data");
 
     (revalidateTag as any)("orders");
+    (revalidateTag as any)(`orders:${order.customer_id}`);
     return finalOrder;
 };
 

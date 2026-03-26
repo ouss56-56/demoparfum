@@ -347,7 +347,7 @@ export default function OrderClientView({ orders }: { orders: any[] }) {
                                                         <p className="text-xs font-mono font-bold text-blue-700">{selectedOrder.invoice.invoiceNumber}</p>
                                                     </div>
                                                     <Link 
-                                                        href={`/${locale}/admin/orders/${encodeURIComponent(selectedOrder.id)}/invoice/print`}
+                                                        href={`/${locale}/invoice/${selectedOrder.id}`}
                                                         target="_blank"
                                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-colors flex items-center gap-1"
                                                     >
