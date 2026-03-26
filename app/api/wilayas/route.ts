@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import geo from "algerian-geo";
+import { getAllWilayas } from "algerian-geo";
 
 export async function GET() {
     try {
-        const wilayas = geo.getWilayas().map((w: any) => ({
+        const wilayas = getAllWilayas().map((w: any) => ({
             id: w.code,
             number: w.code,
             name: w.name,

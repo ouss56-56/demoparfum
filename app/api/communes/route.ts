@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import geo from "algerian-geo";
+import { getCommunesByWilayaCode } from "algerian-geo";
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     try {
         // algerian-geo uses string codes like "01", "02"
         const formattedId = String(wilayaId).padStart(2, '0');
-        const communes = geo.getCommunesByWilayaCode(formattedId).map((c: any) => ({
+        const communes = getCommunesByWilayaCode(formattedId).map((c: any) => ({
             id: c.name,
             name: c.name,
             name_en: c.name,
