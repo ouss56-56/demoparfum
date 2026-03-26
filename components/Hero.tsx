@@ -7,7 +7,10 @@ import { useTranslations } from "next-intl";
 export default function Hero() {
     const t = useTranslations("home");
     return (
-        <section className="relative h-screen flex items-center justify-center overflow-hidden bg-black -mt-[116px]">
+        <section 
+            className="relative h-screen flex items-center justify-center overflow-hidden bg-black"
+            style={{ marginTop: 'calc(-1 * (var(--announcement-height, 0px) + var(--navbar-height, 70px)))' }}
+        >
             {/* Fallback for background video - using a luxury image for now */}
             <div
                 className="absolute inset-0 z-0 opacity-60"

@@ -75,7 +75,7 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 pt-8 pb-20">
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 pb-20">
             <div className="max-w-xl w-full">
                 {/* Header */}
                 <div className="text-center mb-10">

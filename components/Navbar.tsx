@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Shield, User, ShoppingCart } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useRef } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations, useLocale } from 'next-intl';
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -31,9 +32,34 @@ export default function Navbar({ customerName, settings }: Readonly<NavbarProps 
     const t = useTranslations('common.nav');
     const b = useTranslations('common.buttons');
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+    const navRef = useRef<HTMLElement>(null);
     const { totalQuantity, setIsCartOpen } = useCart();
 
     const isHeroPage = pathname === `/${locale}` || pathname === `/${locale}/`;
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+
+        const updateHeight = () => {
+            if (navRef.current) {
+                document.documentElement.style.setProperty('--navbar-height', `${navRef.current.offsetHeight}px`);
+                console.log("[Navbar] Height set to:", navRef.current.offsetHeight);
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        window.addEventListener("resize", updateHeight);
+        handleScroll();
+        updateHeight();
+
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener("resize", updateHeight);
+        };
+    }, []);
 
     const navLinks = [
         { href: `/${locale}`, label: t('home') },
@@ -46,8 +72,9 @@ export default function Navbar({ customerName, settings }: Readonly<NavbarProps 
 
     return (
         <nav
-            className={`w-full transition-all duration-500 ${isHeroPage
-                ? "bg-transparent"
+            ref={navRef}
+            className={`w-full transition-all duration-500 fixed top-[var(--announcement-height,0px)] left-0 z-50 ${isHeroPage
+                ? (isScrolled ? "bg-white/90 backdrop-blur-lg border-b border-primary/10 shadow-sm" : "bg-transparent")
                 : "bg-white/90 backdrop-blur-lg border-b border-primary/10 shadow-sm"
                 }`}
         >

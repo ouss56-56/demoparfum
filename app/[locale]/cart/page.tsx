@@ -36,7 +36,7 @@ export default function CartPage() {
     }
 
     return (
-        <main className={`pt-8 pb-20 min-h-screen bg-[#FAFAF8] ${isRtl ? "rtl" : "ltr"}`}>
+        <div className={`pb-20 min-h-screen bg-[#FAFAF8] ${isRtl ? "rtl" : "ltr"}`}>
             <div className="max-w-7xl mx-auto px-6">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div className={isRtl ? "text-right" : "text-left"}>
@@ -215,6 +215,6 @@ export default function CartPage() {
                     </div>
                 )}
             </div>
-        </main>
+        </div>
     );
 }

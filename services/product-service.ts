@@ -300,6 +300,9 @@ export const createProduct = async (data: any) => {
     }
 
     (revalidateTag as any)('products');
+    (revalidateTag as any)('featured-products');
+    (revalidateTag as any)('new-arrivals');
+    (revalidateTag as any)('best-sellers');
     return mapProduct(newProduct);
 };
 

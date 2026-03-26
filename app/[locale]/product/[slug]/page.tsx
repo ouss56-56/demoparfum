@@ -127,16 +127,16 @@ export default function ProductPage() {
 
     if (loading) {
         return (
-            <main className="pt-8 min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </main>
+            </div>
         );
     }
 
     if (error || !product) {
         console.log(`[ProductPage] Error or no product. Error: ${error}`);
         return (
-            <main className="pt-8 min-h-screen flex flex-col items-center justify-center gap-4 bg-[#FAFAF8]">
+            <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#FAFAF8]">
                 <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-4">
                     <ShieldCheck className="w-10 h-10 text-red-200" />
                 </div>
@@ -145,12 +145,12 @@ export default function ProductPage() {
                 <Link href={`/${locale}/catalog`} className="px-10 py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-xl shadow-primary/20">
                     {t("back_to_shop")}
                 </Link>
-            </main>
+            </div>
         );
     }
 
     return (
-        <main className={`pt-8 pb-20 min-h-screen bg-[#FAFAF8] ${locale === 'ar' ? 'rtl' : 'ltr'}`}>
+        <div className={`pb-20 min-h-screen bg-[#FAFAF8] ${locale === 'ar' ? 'rtl' : 'ltr'}`}>
             <div className="max-w-7xl mx-auto px-6">
                 {/* Header Actions */}
                 <div className="flex items-center justify-between mb-12">
@@ -344,6 +344,6 @@ export default function ProductPage() {
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
     );
 }

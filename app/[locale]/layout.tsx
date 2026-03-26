@@ -68,7 +68,10 @@ export default async function RootLayout(props: {
                             <AnnouncementMarquee />
                             <Navbar customerName={customer?.name} settings={settings} />
                         </header>
-                        <main className="flex-1 pt-[116px]">
+                        <main 
+                            className="flex-1" 
+                            style={{ paddingTop: 'calc(var(--announcement-height, 0px) + var(--navbar-height, 70px))' }}
+                        >
                             {children}
                         </main>
                         <Footer settings={settings} />

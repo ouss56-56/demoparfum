@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Megaphone, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLocale } from 'next-intl';
@@ -10,24 +10,49 @@ import Link from "next/link";
 export default function AnnouncementMarquee() {
     const [announcements, setAnnouncements] = useState<any[]>([]);
     const [isVisible, setIsVisible] = useState(true);
+    const containerRef = useRef<HTMLDivElement>(null);
     const locale = useLocale();
     const isRtl = locale === 'ar';
 
     useEffect(() => {
         const fetchAnnouncements = async () => {
-            const { data } = await supabase
-                .from("notifications")
-                .select("*")
-                .eq("type", "ANNOUNCEMENT")
-                .order("created_at", { ascending: false })
-                .limit(5);
+            try {
+                const { data, error } = await supabase
+                    .from("notifications")
+                    .select("*")
+                    .eq("type", "ANNOUNCEMENT")
+                    .order("created_at", { ascending: false })
+                    .limit(5);
 
-            if (data && data.length > 0) {
-                setAnnouncements(data);
+                if (error) {
+                    console.error("[Marquee] Fetch error:", error);
+                    return;
+                }
+
+                console.log("[Marquee] Fetched announcements:", data?.length);
+                if (data && data.length > 0) {
+                    setAnnouncements(data);
+                }
+            } catch (err) {
+                console.error("[Marquee] Unexpected error:", err);
             }
         };
 
         fetchAnnouncements();
+        
+        // Update CSS variable for height
+        const updateHeight = () => {
+            if (containerRef.current) {
+                const height = containerRef.current.offsetHeight;
+                document.documentElement.style.setProperty('--announcement-height', `${height}px`);
+                console.log("[Marquee] Height set to:", height);
+            } else {
+                document.documentElement.style.setProperty('--announcement-height', '0px');
+            }
+        };
+
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
 
         const channel = supabase
             .channel('public:notifications_marquee')
@@ -43,13 +68,28 @@ export default function AnnouncementMarquee() {
 
         return () => {
             supabase.removeChannel(channel);
+            window.removeEventListener('resize', updateHeight);
+            document.documentElement.style.setProperty('--announcement-height', '0px');
         };
     }, []);
+
+    useEffect(() => {
+        // Recalculate if visibility or announcement count changes
+        if (containerRef.current && isVisible && announcements.length > 0) {
+            const height = containerRef.current.offsetHeight;
+            document.documentElement.style.setProperty('--announcement-height', `${height}px`);
+        } else {
+            document.documentElement.style.setProperty('--announcement-height', '0px');
+        }
+    }, [isVisible, announcements]);
 
     if (!isVisible || announcements.length === 0) return null;
 
     return (
-        <div className="bg-[#1a1a1a] text-white/90 py-3 relative border-b border-white/5 overflow-hidden">
+        <div 
+            ref={containerRef}
+            className="bg-[#1a1a1a] text-white/90 py-3 relative border-b border-white/5 overflow-hidden z-[60]"
+        >
             <div className="max-w-7xl mx-auto px-6 relative flex items-center gap-8">
                 <div className="hidden sm:flex items-center gap-2 shrink-0">
                     <Megaphone className="w-3 h-3 text-[#D4AF37]" />

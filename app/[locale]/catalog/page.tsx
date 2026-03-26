@@ -122,7 +122,7 @@ function CatalogContent() {
     }, []);
 
     return (
-        <main className={`pt-8 pb-20 min-h-screen bg-[#FAFAF8] ${locale === 'ar' ? 'rtl' : 'ltr'}`}>
+        <div className={`pb-20 min-h-screen bg-[#FAFAF8] ${locale === 'ar' ? 'rtl' : 'ltr'}`}>
             <div className="max-w-7xl mx-auto px-6">
                 {/* Header */}
                 <div className="text-center mb-12">
@@ -340,7 +340,7 @@ function CatalogContent() {
                     </div>
                 )}
             </div>
-        </main>
+        </div>
     );
 }
 

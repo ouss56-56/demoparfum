@@ -22,6 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         if (!product) {
+            console.warn(`[API/Product] Product NOT found for ID/Slug: ${id}`);
             return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
         }
 
