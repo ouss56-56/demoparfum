@@ -27,7 +27,7 @@ export const createAdminUser = async (data: {
     // For now, we'll use a custom 'admins' table.
     const [admin] = await sql`
         INSERT INTO admins (email, password_hash, name, role)
-        VALUES (${data.email}, ${hashedPassword}, ${data.name}, 'SUPER_ADMIN')
+        VALUES (${data.email}, ${hashedPassword}, ${data.name ?? null}, 'SUPER_ADMIN')
         RETURNING *
     `;
 

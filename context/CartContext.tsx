@@ -42,7 +42,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         setIsMounted(true);
         try {
-            const saved = localStorage.getItem("lps_cart");
+            const saved = localStorage.getItem("demo_perfume_cart");
             if (saved) {
                 setItems(JSON.parse(saved));
             }
@@ -54,7 +54,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // Save to localStorage when items change
     useEffect(() => {
         if (isMounted) {
-            localStorage.setItem("lps_cart", JSON.stringify(items));
+            localStorage.setItem("demo_perfume_cart", JSON.stringify(items));
         }
     }, [items, isMounted]);
 

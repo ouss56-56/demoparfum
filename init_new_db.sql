@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS admins (
 
 -- 3. INSERT INITIAL DATA
 INSERT INTO site_settings (id, whatsapp_number, facebook_page, contact_email, store_address, logo_url)
-VALUES ('00000000-0000-0000-0000-000000000000', '+213542303496', 'demo_perfume', 'admin@demo-perfume.com', 'Algeria, Demo District', '/logo.png')
+VALUES ('00000000-0000-0000-0000-000000000000', '+213542303496', 'demo_luxe', 'admin@demo-luxe.com', 'Algeria, Demo Luxe District', '/logo.png')
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert Admin (Password: 123456)
