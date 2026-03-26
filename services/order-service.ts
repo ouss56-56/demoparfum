@@ -310,7 +310,7 @@ export const countOrdersByCustomer = (customerId: string): Promise<number> => {
             }
         },
         [`orders-count-${customerId}`],
-        { tags: [`orders:${customerId}`], revalidate: 3600 }
+        { tags: [`orders:${customerId}`], revalidate: 30 }
     )();
 };
 
@@ -347,7 +347,7 @@ export const getOrdersByCustomer = (customerId: string, limit = 50, skip = 0): P
             }
         },
         [`orders-${customerId}-${limit}-${skip}`],
-        { tags: [`orders:${customerId}`, "orders"], revalidate: 3600 }
+        { tags: [`orders:${customerId}`, "orders"], revalidate: 30 }
     )();
 };
 
