@@ -1,59 +1,71 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 // ── STOCK ADJUSTMENTS ─────────────────────────────────────────────────────
 export const decrementStock = async (productId: string, quantity: number, weight: number = 100) => {
     const totalWeight = quantity * weight;
     
-    // Using a simple RPC or direct update with check
-    // Ideally use an RPC for atomic "check and update"
-    const { data, error } = await supabaseAdmin.rpc('adjust_stock', {
-        p_product_id: productId,
-        p_amount: -totalWeight,
-        p_reason: 'DECREMENT_STOCK',
-        p_source: 'SYSTEM'
-    });
+    // Direct SQL update with stock_weight
+    const [product] = await sql`
+        UPDATE products 
+        SET stock_weight = stock_weight - ${totalWeight}
+        WHERE id = ${productId}
+        RETURNING stock_weight
+    `;
 
-    if (error) throw error;
-    return { id: productId, stock: data };
+    // Log the change
+    await sql`
+        INSERT INTO inventory_logs (product_id, change_type, quantity, reason, source)
+        VALUES (${productId}, 'DECREMENT_STOCK', ${-totalWeight}, 'Order decrement', 'SYSTEM')
+    `;
+
+    return { id: productId, stock: product.stock_weight };
 };
 
 export const incrementStock = async (productId: string, quantity: number, weight: number = 100) => {
     const totalWeight = quantity * weight;
-    const { data, error } = await supabaseAdmin.rpc('adjust_stock', {
-        p_product_id: productId,
-        p_amount: totalWeight,
-        p_reason: 'INCREMENT_STOCK',
-        p_source: 'SYSTEM'
-    });
+    
+    const [product] = await sql`
+        UPDATE products 
+        SET stock_weight = stock_weight + ${totalWeight}
+        WHERE id = ${productId}
+        RETURNING stock_weight
+    `;
 
-    if (error) throw error;
-    return { id: productId, stock: data };
+    await sql`
+        INSERT INTO inventory_logs (product_id, change_type, quantity, reason, source)
+        VALUES (${productId}, 'INCREMENT_STOCK', ${totalWeight}, 'Manual increment', 'SYSTEM')
+    `;
+
+    return { id: productId, stock: product.stock_weight };
 };
 
 // ── STOCK QUERIES ─────────────────────────────────────────────────────────
 export const getStockLevel = async (productId: string) => {
-    const { data, error } = await supabaseAdmin
-        .from('products')
-        .select('id, name, stock')
-        .eq('id', productId)
-        .single();
-    
-    if (error || !data) return null;
-    return { id: data.id, name: data.name, stock: data.stock };
+    try {
+        const [data] = await sql`SELECT id, name, stock_weight FROM products WHERE id = ${productId} LIMIT 1`;
+        if (!data) return null;
+        return { id: data.id, name: data.name, stock: data.stock_weight };
+    } catch (err) {
+        console.error("Inventory fetch error (getStockLevel):", err);
+        return null;
+    }
 };
 
 export const getLowStockProducts = async (threshold = 500) => {
-    const { data, error } = await supabaseAdmin
-        .from('products')
-        .select('*')
-        .lte('stock', threshold)
-        .order('stock', { ascending: true });
-
-    if (error) throw error;
-    return (data || []).map(p => ({
-        ...p,
-        stock: p.stock
-    }));
+    try {
+        const products = await sql`
+            SELECT * FROM products 
+            WHERE stock_weight <= ${threshold}
+            ORDER BY stock_weight ASC
+        `;
+        return (products || []).map(p => ({
+            ...p,
+            stock: p.stock_weight
+        }));
+    } catch (err) {
+        console.error("Inventory fetch error (getLowStockProducts):", err);
+        return [];
+    }
 };
 
 // ── ADMIN ADJUSTMENTS ─────────────────────────────────────────────────────
@@ -62,54 +74,50 @@ export const adjustStock = async (
     weightAmount: number, // can be positive or negative
     reason: string
 ) => {
-    const { data, error } = await supabaseAdmin.rpc('adjust_stock', {
-        p_product_id: productId,
-        p_amount: weightAmount,
-        p_reason: reason,
-        p_source: 'ADMIN'
-    });
+    const [product] = await sql`
+        UPDATE products 
+        SET stock_weight = stock_weight + ${weightAmount}
+        WHERE id = ${productId}
+        RETURNING *
+    `;
 
-    if (error) throw error;
-    
-    // Fetch product to return full data as before
-    const { data: product } = await supabaseAdmin
-        .from('products')
-        .select('*')
-        .eq('id', productId)
-        .single();
+    await sql`
+        INSERT INTO inventory_logs (product_id, change_type, quantity, reason, source)
+        VALUES (${productId}, ${weightAmount > 0 ? 'INCREMENT' : 'DECREMENT'}, ${weightAmount}, ${reason}, 'ADMIN')
+    `;
 
-    return { ...product, stock: product?.stock };
+    return { ...product, stock: product.stock_weight };
 };
 
 // ── HISTORY ───────────────────────────────────────────────────────────────
 export const getInventoryHistory = async (filters?: { productId?: string; changeType?: string }) => {
-    let query = supabaseAdmin
-        .from('inventory_logs')
-        .select('*, products(name, brand, image_url)')
-        .order('created_at', { ascending: false });
-    
-    if (filters?.productId) {
-        query = query.eq('product_id', filters.productId);
+    try {
+        const logs = await sql`
+            SELECT l.*, p.name as product_name, p.brand as product_brand, p.image_url as product_image_url
+            FROM inventory_logs l
+            LEFT JOIN products p ON l.product_id = p.id
+            WHERE 1=1
+            ${filters?.productId ? sql`AND l.product_id = ${filters.productId}` : sql``}
+            ${filters?.changeType ? sql`AND l.change_type = ${filters.changeType}` : sql``}
+            ORDER BY l.created_at DESC
+        `;
+        
+        return (logs || []).map(log => ({
+            id: log.id,
+            productId: log.product_id,
+            changeType: log.change_type,
+            quantity: log.quantity,
+            source: log.source,
+            reason: log.reason,
+            createdAt: new Date(log.created_at),
+            product: log.product_name ? {
+                name: log.product_name,
+                brand: log.product_brand,
+                imageUrl: log.product_image_url
+            } : null
+        }));
+    } catch (err) {
+        console.error("Inventory history fetch error:", err);
+        return [];
     }
-    if (filters?.changeType) {
-        query = query.eq('change_type', filters.changeType);
-    }
-    
-    const { data, error } = await query;
-    if (error) throw error;
-    
-    return (data || []).map(log => ({
-        id: log.id,
-        productId: log.product_id,
-        changeType: log.change_type,
-        quantity: log.quantity,
-        source: log.source,
-        reason: log.reason,
-        createdAt: new Date(log.created_at),
-        product: log.products ? {
-            name: log.products.name,
-            brand: log.products.brand,
-            imageUrl: log.products.image_url
-        } : null
-    }));
 };

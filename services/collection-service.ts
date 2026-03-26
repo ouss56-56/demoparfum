@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { unstable_cache, revalidateTag } from "next/cache";
 
 function generateSlug(name: string): string {
@@ -10,14 +10,15 @@ export const getCollections = () => {
     return unstable_cache(
         async () => {
             try {
-                const { data, error } = await supabaseAdmin
-                    .from('collections')
-                    .select('*, products(id)')
-                    .order('name', { ascending: true });
+                const collections = await sql`
+                    SELECT c.*, 
+                           (SELECT json_agg(json_build_object('id', p.id)) 
+                            FROM products p WHERE c.id = ANY(p.collection_ids)) as products
+                    FROM collections c
+                    ORDER BY c.name ASC
+                `;
 
-                if (error) throw error;
-
-                return (data || []).map(c => ({
+                return (collections || []).map(c => ({
                     id: c.id,
                     name: c.name,
                     slug: c.slug,
@@ -36,28 +37,22 @@ export const getCollections = () => {
 
 export const getCollectionBySlug = async (slug: string) => {
     try {
-        const { data: collection, error: cError } = await supabaseAdmin
-            .from('collections')
-            .select('*')
-            .eq('slug', slug)
-            .single();
+        const [collection] = await sql`SELECT * FROM collections WHERE slug = ${slug} LIMIT 1`;
+        if (!collection) return null;
 
-        if (cError || !collection) return null;
-
-        const { data: products, error: pError } = await supabaseAdmin
-            .from('products')
-            .select('*, categories(id, name)')
-            .contains('collection_ids', [collection.id])
-            .eq('status', 'ACTIVE');
-
-        if (pError) throw pError;
+        const products = await sql`
+            SELECT p.*, c.id as cat_id, c.name as cat_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE ${collection.id} = ANY(p.collection_ids) AND p.status = 'ACTIVE'
+        `;
 
         const mappedProducts = (products || []).map(p => ({
             product: {
                 id: p.id,
                 ...p,
                 createdAt: new Date(p.created_at),
-                category: p.categories ? { id: p.categories.id, name: p.categories.name } : null
+                category: p.cat_id ? { id: p.cat_id, name: p.cat_name } : null
             }
         }));
 
@@ -71,13 +66,12 @@ export const getCollectionBySlug = async (slug: string) => {
 // ── CREATE ────────────────────────────────────────────────────────────────
 export const createCollection = async (data: { name: string }) => {
     const slug = generateSlug(data.name);
-    const { data: newColl, error } = await supabaseAdmin
-        .from('collections')
-        .insert([{ name: data.name, slug }])
-        .select()
-        .single();
+    const [newColl] = await sql`
+        INSERT INTO collections (name, slug)
+        VALUES (${data.name}, ${slug})
+        RETURNING *
+    `;
 
-    if (error) throw error;
     (revalidateTag as any)('collections');
     return { ...newColl, id: newColl.id };
 };
@@ -85,27 +79,20 @@ export const createCollection = async (data: { name: string }) => {
 // ── UPDATE ────────────────────────────────────────────────────────────────
 export const updateCollection = async (id: string, data: { name: string }) => {
     const slug = generateSlug(data.name);
-    const { data: updated, error } = await supabaseAdmin
-        .from('collections')
-        .update({ name: data.name, slug })
-        .eq('id', id)
-        .select()
-        .single();
+    const [updated] = await sql`
+        UPDATE collections 
+        SET name = ${data.name}, slug = ${slug}
+        WHERE id = ${id}
+        RETURNING *
+    `;
 
-    if (error) throw error;
     (revalidateTag as any)('collections');
     return { ...updated, id: updated.id };
 };
 
 // ── DELETE ────────────────────────────────────────────────────────────────
 export const deleteCollection = async (id: string) => {
-    const { error } = await supabaseAdmin
-        .from('collections')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
+    await sql`DELETE FROM collections WHERE id = ${id}`;
     (revalidateTag as any)('collections');
     return { id };
 };
-

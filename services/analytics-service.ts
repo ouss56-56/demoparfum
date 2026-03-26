@@ -1,37 +1,28 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 // ── PRODUCT PERFORMANCE & DEMAND FORECAST ─────────────────────────────────
 export const getProductAnalytics = async () => {
   try {
-    const { data: products, error: pError } = await supabaseAdmin
-        .from('products')
-        .select('id, name, brand, image_url, base_price, stock_weight');
-
-    if (pError) {
-        console.error("Failed to fetch product analytics:", pError);
-        return [];
-    }
+    const products = await sql`
+        SELECT id, name, brand, image_url, base_price, stock_weight 
+        FROM products
+    `;
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Fetch orders from last 30 days to calculate demand
-    const { data: recentOrders, error: oError } = await supabaseAdmin
-        .from('orders')
-        .select('order_items(product_id, quantity)')
-        .neq('status', 'CANCELLED')
-        .gte('created_at', thirtyDaysAgo.toISOString());
-
-    if (oError) {
-        console.error("Failed to fetch recent orders:", oError);
-    }
+    // Fetch order items from last 30 days
+    const recentOrderItems = await sql`
+        SELECT oi.product_id, SUM(oi.quantity) as total_qty
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.status != 'CANCELLED' AND o.created_at >= ${thirtyDaysAgo.toISOString()}
+        GROUP BY oi.product_id
+    `;
 
     const recentDemandMap = new Map<string, number>();
-    (recentOrders || []).forEach((order: any) => {
-        order.order_items?.forEach((item: any) => {
-            const currentQty = recentDemandMap.get(item.product_id) || 0;
-            recentDemandMap.set(item.product_id, currentQty + (item.quantity || 0));
-        });
+    (recentOrderItems || []).forEach((item: any) => {
+        recentDemandMap.set(item.product_id, Number(item.total_qty || 0));
     });
 
     const getDemandLabel = (qty: number) => {
@@ -65,16 +56,12 @@ export const getRevenueMetrics = async () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: validOrders, error } = await supabaseAdmin
-        .from('orders')
-        .select('total_price, created_at')
-        .neq('status', 'CANCELLED')
-        .order('created_at', { ascending: true });
-
-    if (error) {
-        console.error("Failed to fetch revenue metrics:", error);
-        return { dailyRevenue: [], monthlyRevenue: [] };
-    }
+    const validOrders = await sql`
+        SELECT total_price, created_at 
+        FROM orders 
+        WHERE status != 'CANCELLED'
+        ORDER BY created_at ASC
+    `;
 
     const dailyMap = new Map<string, { revenue: number, orders: number }>();
     for (let i = 29; i >= 0; i--) {
@@ -86,7 +73,7 @@ export const getRevenueMetrics = async () => {
 
     const monthlyMap = new Map<string, number>();
 
-    validOrders?.forEach((order: any) => {
+    (validOrders || []).forEach((order: any) => {
         const createdAt = new Date(order.created_at);
         const dStr = createdAt.toISOString().split('T')[0];
         const mStr = createdAt.toISOString().slice(0, 7); // YYYY-MM
@@ -125,27 +112,19 @@ export const getRevenueMetrics = async () => {
 // ── TOP CUSTOMERS ─────────────────────────────────────────────────────────
 export const getTopCustomers = async (limit = 10) => {
   try {
-    const { data: customers, error: cError } = await supabaseAdmin
-        .from('customers')
-        .select('id, name, shop_name, phone');
+    const customers = await sql`
+        SELECT id, name, shop_name, phone 
+        FROM customers
+    `;
 
-    if (cError) {
-        console.error("Failed to fetch customers:", cError);
-        return [];
-    }
-
-    const { data: validOrders, error: oError } = await supabaseAdmin
-        .from('orders')
-        .select('customer_id, total_price')
-        .neq('status', 'CANCELLED');
-
-    if (oError) {
-        console.error("Failed to fetch orders for top customers:", oError);
-        return [];
-    }
+    const orders = await sql`
+        SELECT customer_id, total_price 
+        FROM orders 
+        WHERE status != 'CANCELLED'
+    `;
         
     const customerSpentMap = new Map<string, { totalSpent: number, count: number }>();
-    validOrders?.forEach((order: any) => {
+    (orders || []).forEach((order: any) => {
         if (order.customer_id) {
             const current = customerSpentMap.get(order.customer_id) || { totalSpent: 0, count: 0 };
             customerSpentMap.set(order.customer_id, {
@@ -177,14 +156,33 @@ export const getTopCustomers = async (limit = 10) => {
 
 // ── EXPORTS ───────────────────────────────────────────────────────────────
 export const exportOrdersReport = async (dateFrom?: string, dateTo?: string) => {
-    const { data, error } = await supabaseAdmin.functions.invoke('export-reports', {
-        body: { 
-            reportType: 'orders',
-            dateFrom,
-            dateTo 
-        }
-    });
+    try {
+        const query = sql`
+            SELECT o.id, o.created_at, o.total_price, o.status, c.name as customer_name, c.shop_name
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            WHERE 1=1
+            ${dateFrom ? sql`AND o.created_at >= ${dateFrom}` : sql``}
+            ${dateTo ? sql`AND o.created_at <= ${dateTo}` : sql``}
+            ORDER BY o.created_at DESC
+        `;
 
-    if (error) throw error;
-    return data; // This will be the CSV string
+        const data = await query;
+        
+        // Manual CSV generation
+        const header = ["Order ID", "Date", "Customer", "Shop", "Total", "Status"].join(",");
+        const rows = (data || []).map((o: any) => [
+            o.id,
+            new Date(o.created_at).toISOString(),
+            o.customer_name || "N/A",
+            o.shop_name || "N/A",
+            o.total_price,
+            o.status
+        ].join(","));
+
+        return [header, ...rows].join("\n");
+    } catch (e) {
+        console.error("exportOrdersReport failed:", e);
+        throw e;
+    }
 };

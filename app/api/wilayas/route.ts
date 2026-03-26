@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import wilayasDataRaw from "@/lib/algeria_69_wilayas.json";
+import geo from "algerian-geo";
 
 export async function GET() {
     try {
-        const wilayasData = wilayasDataRaw as any[];
-        const wilayas = wilayasData.map((w: any) => ({
+        const wilayas = geo.getWilayas().map((w: any) => ({
             id: w.code,
             number: w.code,
             name: w.name,

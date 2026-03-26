@@ -22,7 +22,10 @@ export async function POST(request: NextRequest) {
                 upsert: true
             });
 
-        if (error) throw error;
+        if (error) {
+            console.error("[StorageUpload] Error:", error.message, error);
+            throw error;
+        }
 
         // Get public URL
         const { data: { publicUrl } } = supabaseAdmin.storage

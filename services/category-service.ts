@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { unstable_cache, revalidateTag } from "next/cache";
 
 export interface Category {
@@ -19,14 +19,16 @@ export const getCategories = () => {
     return unstable_cache(
         async () => {
             try {
-                const { data, error } = await supabaseAdmin
-                    .from('categories')
-                    .select('*, products(id)')
-                    .order('name', { ascending: true });
+                // Fetch categories and count products
+                const categories = await sql`
+                    SELECT c.*, 
+                           (SELECT json_agg(json_build_object('id', p.id)) 
+                            FROM products p WHERE p.category_id = c.id) as products
+                    FROM categories c
+                    ORDER BY c.name ASC
+                `;
 
-                if (error) throw error;
-
-                return (data || []).map(cat => ({
+                return (categories || []).map(cat => ({
                     id: cat.id,
                     name: cat.name,
                     slug: cat.slug,
@@ -46,22 +48,14 @@ export const getCategories = () => {
 
 export const getCategoryById = async (id: string) => {
     try {
-        const { data: category, error: catError } = await supabaseAdmin
-            .from('categories')
-            .select('*')
-            .eq('id', id)
-            .single();
-
-        if (catError || !category) return null;
+        const [category] = await sql`SELECT * FROM categories WHERE id = ${id} LIMIT 1`;
+        if (!category) return null;
         
-        const { data: products, error: prodError } = await supabaseAdmin
-            .from('products')
-            .select('*')
-            .eq('category_id', id)
-            .eq('status', 'ACTIVE')
-            .order('created_at', { ascending: false });
-
-        if (prodError) throw prodError;
+        const products = await sql`
+            SELECT * FROM products 
+            WHERE category_id = ${id} AND status = 'ACTIVE'
+            ORDER BY created_at DESC
+        `;
 
         return { 
             id: category.id, 
@@ -81,22 +75,14 @@ export const getCategoryById = async (id: string) => {
 
 export const getCategoryBySlug = async (slug: string) => {
     try {
-        const { data: category, error: catError } = await supabaseAdmin
-            .from('categories')
-            .select('*')
-            .eq('slug', slug)
-            .single();
-
-        if (catError || !category) return null;
+        const [category] = await sql`SELECT * FROM categories WHERE slug = ${slug} LIMIT 1`;
+        if (!category) return null;
         
-        const { data: products, error: prodError } = await supabaseAdmin
-            .from('products')
-            .select('*')
-            .eq('category_id', category.id)
-            .eq('status', 'ACTIVE')
-            .order('created_at', { ascending: false });
-
-        if (prodError) throw prodError;
+        const products = await sql`
+            SELECT * FROM products 
+            WHERE category_id = ${category.id} AND status = 'ACTIVE'
+            ORDER BY created_at DESC
+        `;
 
         return { 
             ...category, 
@@ -119,17 +105,12 @@ export const createCategory = async (data: {
     description?: string;
 }) => {
     const slug = generateSlug(data.name);
-    const { data: newCategory, error } = await supabaseAdmin
-        .from('categories')
-        .insert([{
-            name: data.name,
-            description: data.description,
-            slug
-        }])
-        .select()
-        .single();
+    const [newCategory] = await sql`
+        INSERT INTO categories (name, description, slug)
+        VALUES (${data.name}, ${data.description || null}, ${slug})
+        RETURNING *
+    `;
 
-    if (error) throw error;
     (revalidateTag as any)('categories');
     return { ...newCategory, id: newCategory.id };
 };
@@ -139,31 +120,26 @@ export const updateCategory = async (
     id: string,
     data: Partial<{ name: string; description: string }>
 ) => {
-    const updateData: Record<string, any> = { ...data };
-    if (data.name) {
-        updateData.slug = generateSlug(data.name);
-    }
+    const slug = data.name ? generateSlug(data.name) : undefined;
     
-    const { data: updatedCategory, error } = await supabaseAdmin
-        .from('categories')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+    const [updatedCategory] = await sql`
+        UPDATE categories 
+        SET 
+            name = ${data.name || null},
+            description = ${data.description || null},
+            slug = ${slug || null},
+            updated_at = NOW()
+        WHERE id = ${id}
+        RETURNING *
+    `;
 
-    if (error) throw error;
     (revalidateTag as any)('categories');
     return { ...updatedCategory, id: updatedCategory.id };
 };
 
 // ── DELETE ────────────────────────────────────────────────────────────────
 export const deleteCategory = async (id: string) => {
-    const { error } = await supabaseAdmin
-        .from('categories')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
+    await sql`DELETE FROM categories WHERE id = ${id}`;
     (revalidateTag as any)('categories');
     return { id };
 };

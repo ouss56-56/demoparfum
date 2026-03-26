@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS products (
     volumes JSONB DEFAULT '[]',
     base_price NUMERIC DEFAULT 0,
     purchase_price NUMERIC DEFAULT 0,
-    stock NUMERIC DEFAULT 0,
+    stock_weight NUMERIC DEFAULT 0,
     low_stock_threshold NUMERIC DEFAULT 500,
     status TEXT DEFAULT 'ACTIVE',
     tag_ids UUID[] DEFAULT '{}',
@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
+    description TEXT,
     image_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS brands (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
+    description TEXT,
     image_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 export interface Brand {
     id: string;
@@ -11,44 +11,42 @@ export interface Brand {
 }
 
 export const getBrands = async () => {
-    const { data, error } = await supabaseAdmin
-        .from('brands')
-        .select('*')
-        .order('name', { ascending: true });
-
-    if (error) throw error;
-    return data as Brand[];
+    try {
+        const brands = await sql`
+            SELECT * FROM brands
+            ORDER BY name ASC
+        `;
+        return brands as any as Brand[];
+    } catch (error) {
+        console.error("Brands fetch error (getBrands):", error);
+        return [];
+    }
 };
 
 export const createBrand = async (data: Partial<Brand>) => {
-    const { data: brand, error } = await supabaseAdmin
-        .from('brands')
-        .insert([data])
-        .select()
-        .single();
-
-    if (error) throw error;
-    return brand as Brand;
+    const slug = data.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const [brand] = await sql`
+        INSERT INTO brands (name, slug, description, image_url)
+        VALUES (${data.name || null}, ${slug || null}, ${data.description || null}, ${data.logo_url || null})
+        RETURNING *
+    `;
+    return brand as any as Brand;
 };
 
 export const updateBrand = async (id: string, data: Partial<Brand>) => {
-    const { data: brand, error } = await supabaseAdmin
-        .from('brands')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return brand as Brand;
+    const [brand] = await sql`
+        UPDATE brands 
+        SET 
+            name = ${data.name || null},
+            description = ${data.description || null},
+            image_url = ${data.logo_url || null}
+        WHERE id = ${id}
+        RETURNING *
+    `;
+    return brand as any as Brand;
 };
 
 export const deleteBrand = async (id: string) => {
-    const { error } = await supabaseAdmin
-        .from('brands')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
+    await sql`DELETE FROM brands WHERE id = ${id}`;
     return true;
 };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import wilayasDataRaw from "@/lib/algeria_69_wilayas.json";
+import geo from "algerian-geo";
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -10,14 +10,9 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const wilayasData = wilayasDataRaw as any[];
-        const wilaya = wilayasData.find((w: any) => String(w.code) === String(wilayaId) || w.name === wilayaId);
-        
-        if (!wilaya) {
-             return NextResponse.json({ success: true, data: [] });
-        }
-
-        const communes = (wilaya.communes || []).map((c: any) => ({
+        // algerian-geo uses string codes like "01", "02"
+        const formattedId = String(wilayaId).padStart(2, '0');
+        const communes = geo.getCommunesByWilayaCode(formattedId).map((c: any) => ({
             id: c.name,
             name: c.name,
             name_en: c.name,
