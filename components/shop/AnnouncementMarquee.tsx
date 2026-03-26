@@ -88,12 +88,12 @@ export default function AnnouncementMarquee() {
     return (
         <div 
             ref={containerRef}
-            className="bg-[#1a1a1a] text-white/90 py-3 relative border-b border-white/5 overflow-hidden z-[60]"
+            className="bg-[#1a1a1a] text-white/90 py-1.5 relative border-b border-white/5 overflow-hidden z-[60]"
         >
             <div className="max-w-7xl mx-auto px-6 relative flex items-center gap-8">
                 <div className="hidden sm:flex items-center gap-2 shrink-0">
-                    <Megaphone className="w-3 h-3 text-[#D4AF37]" />
-                    <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
+                    <Megaphone className="w-2.5 h-2.5 text-[#D4AF37]" />
+                    <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
                         {isRtl ? 'إعلان' : 'News'}
                     </span>
                 </div>
@@ -102,8 +102,8 @@ export default function AnnouncementMarquee() {
                     <div className="whitespace-nowrap flex animate-marquee hover:pause-marquee">
                         {announcements.map((ann, i) => (
                             <div key={`${ann.id}-${i}`} className="mx-8 flex items-center gap-4">
-                                <span className="text-[#D4AF37] opacity-40 text-[10px]">✦</span>
-                                <span className="text-xs sm:text-[13px] font-light tracking-wide flex items-center gap-3">
+                                <span className="text-[#D4AF37] opacity-40 text-[9px]">✦</span>
+                                <span className="text-[11px] sm:text-[12px] font-light tracking-wide flex items-center gap-3">
                                     <span className="text-white font-medium">{ann.title}</span>
                                     <span className="text-white/60">{ann.message}</span>
                                 </span>

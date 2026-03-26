@@ -9,6 +9,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
+import { headers } from 'next/headers';
 
 const playfair = Playfair_Display({
     subsets: ["latin"],
@@ -57,6 +58,10 @@ export default async function RootLayout(props: {
     const settings = await getSiteSettings();
     const direction = locale === 'ar' ? 'rtl' : 'ltr';
 
+    const headersList = await headers();
+    const pathname = headersList.get('x-pathname') || '';
+    const isAdminPage = pathname?.includes('/admin');
+
     return (
         <html lang={locale} dir={direction}>
             <body
@@ -64,13 +69,15 @@ export default async function RootLayout(props: {
             >
                 <NextIntlClientProvider messages={messages}>
                     <CartProvider>
-                        <header className="fixed top-0 left-0 w-full z-50 flex flex-col">
-                            <AnnouncementMarquee />
-                            <Navbar customerName={customer?.name} settings={settings} />
-                        </header>
+                        {!isAdminPage && (
+                            <header className="fixed top-0 left-0 w-full z-50 flex flex-col">
+                                <AnnouncementMarquee />
+                                <Navbar customerName={customer?.name} settings={settings} />
+                            </header>
+                        )}
                         <main 
                             className="flex-1" 
-                            style={{ paddingTop: 'calc(var(--announcement-height, 0px) + var(--navbar-height, 70px))' }}
+                            style={{ paddingTop: isAdminPage ? '0px' : 'calc(var(--announcement-height, 0px) + var(--navbar-height, 70px))' }}
                         >
                             {children}
                         </main>

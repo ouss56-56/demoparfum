@@ -40,7 +40,7 @@ export default function Navbar({ customerName, settings }: Readonly<NavbarProps 
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
+            setIsScrolled(window.scrollY > 50);
         };
 
         const updateHeight = () => {

@@ -182,8 +182,18 @@ export const createOrder = async (input: CreateOrderInput) => {
     (revalidateTag as any)("orders");
 
     // Fetch the created order for mapping
-    const order = await getOrderById(orderId);
-    if (!order) throw new Error("Order created but could not be retrieved");
+    // We add a small delay and retry to ensure the DB state is visible (especially for some adapter/replica scenarios)
+    let order = null;
+    for (let i = 0; i < 3; i++) {
+        order = await getOrderById(orderId);
+        if (order) break;
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms between retries
+    }
+
+    if (!order) {
+        console.error(`[OrderService] Order ${orderId} created but could not be retrieved after retries`);
+        throw new Error("Order created but could not be retrieved");
+    }
 
     try {
         await notifyNewOrder(order.id, order.customer?.shopName || "Customer", order.totalPrice);

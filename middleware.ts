@@ -117,6 +117,8 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    return handleIntl(request);
+    const response = handleIntl(request);
+    response.headers.set("x-pathname", pathname);
+    return response;
 }
 
