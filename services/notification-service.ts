@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 // ── CREATE NOTIFICATION ───────────────────────────────────────────────────
 export const createNotification = async (
@@ -7,31 +7,22 @@ export const createNotification = async (
     message: string,
     metadata?: Record<string, any>
 ) => {
-    const { data: notification, error } = await supabaseAdmin
-        .from('notifications')
-        .insert([{
-            type,
-            title,
-            message,
-            metadata: metadata || null,
-            is_read: false
-        }])
-        .select()
-        .single();
+    const [notification] = await sql`
+        INSERT INTO notifications (type, title, message, metadata, is_read)
+        VALUES (${type}, ${title}, ${message}, ${metadata ? JSON.stringify(metadata) : null}::JSONB, false)
+        RETURNING *
+    `;
 
-    if (error) throw error;
     return { ...notification, id: notification.id, isRead: notification.is_read };
 };
 
 // ── GET ALL NOTIFICATIONS ────────────────────────────────────────────────
 export const getNotifications = async (limit = 30) => {
-    const { data, error } = await supabaseAdmin
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-    if (error) throw error;
+    const data = await sql`
+        SELECT * FROM notifications
+        ORDER BY created_at DESC
+        LIMIT ${limit}
+    `;
 
     return (data || []).map(n => ({
         id: n.id,
@@ -43,35 +34,27 @@ export const getNotifications = async (limit = 30) => {
 
 // ── GET UNREAD COUNT ─────────────────────────────────────────────────────
 export const getUnreadCount = async () => {
-    const { count, error } = await supabaseAdmin
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_read', false);
-
-    if (error) throw error;
-    return count || 0;
+    const [result] = await sql`
+        SELECT COUNT(*) as count FROM notifications WHERE is_read = false
+    `;
+    return Number(result.count) || 0;
 };
 
 // ── MARK AS READ ─────────────────────────────────────────────────────────
 export const markAsRead = async (id: string) => {
-    const { error } = await supabaseAdmin
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', id);
-
-    if (error) throw error;
+    await sql`
+        UPDATE notifications SET is_read = true WHERE id = ${id}
+    `;
     return { id, isRead: true };
 };
 
 // ── MARK ALL AS READ ─────────────────────────────────────────────────────
 export const markAllAsRead = async () => {
-    const { count, error } = await supabaseAdmin
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('is_read', false); // Optional filter to optimize
-
-    if (error) throw error;
-    return { count: count || 0 };
+    const result = await sql`
+        UPDATE notifications SET is_read = true WHERE is_read = false
+        RETURNING id
+    `;
+    return { count: result.length || 0 };
 };
 
 // ── TRIGGER HELPERS ──────────────────────────────────────────────────────

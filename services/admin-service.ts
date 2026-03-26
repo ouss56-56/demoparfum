@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export interface Admin {
@@ -23,19 +24,12 @@ export const createAdminUser = async (data: {
     
     const hashedPassword = await bcrypt.hash(data.password, 10);
     
-    // For now, we'll use a custom 'admins' table in Supabase.
-    const { data: admin, error } = await supabaseAdmin
-        .from('admins')
-        .insert([{
-            email: data.email,
-            password_hash: hashedPassword,
-            name: data.name,
-            role: "SUPER_ADMIN"
-        }])
-        .select()
-        .single();
-
-    if (error) throw error;
+    // For now, we'll use a custom 'admins' table.
+    const [admin] = await sql`
+        INSERT INTO admins (email, password_hash, name, role)
+        VALUES (${data.email}, ${hashedPassword}, ${data.name}, 'SUPER_ADMIN')
+        RETURNING *
+    `;
 
     return { 
         id: admin.id, 
@@ -48,27 +42,19 @@ export const createAdminUser = async (data: {
 
 export const getAdminStats = async () => {
     try {
-        // Use RPC or parallel queries for counts
-        const [ordersCount, customersCount, productsCount] = await Promise.all([
-            supabaseAdmin.from('orders').select('id', { count: 'exact', head: true }),
-            supabaseAdmin.from('customers').select('id', { count: 'exact', head: true }),
-            supabaseAdmin.from('products').select('id', { count: 'exact', head: true }),
-        ]);
-
-        // Revenue calculation using Postgres sum aggregation
-        const { data: revenueData, error: revError } = await supabaseAdmin
-            .from('orders')
-            .select('total_price')
-            .not('total_price', 'is', null)
-            .neq('status', 'CANCELLED');
-        
-        let totalRevenue = (revenueData || []).reduce((acc, curr) => acc + Number(curr.total_price), 0);
+        const [counts] = await sql`
+            SELECT 
+                (SELECT count(*) FROM orders) as orders_count,
+                (SELECT count(*) FROM customers) as customers_count,
+                (SELECT count(*) FROM products) as products_count,
+                (SELECT SUM(total_price) FROM orders WHERE status != 'CANCELLED') as total_revenue
+        `;
 
         return {
-            totalOrders: ordersCount.count || 0,
-            totalCustomers: customersCount.count || 0,
-            totalProducts: productsCount.count || 0,
-            totalRevenue,
+            totalOrders: Number(counts.orders_count) || 0,
+            totalCustomers: Number(counts.customers_count) || 0,
+            totalProducts: Number(counts.products_count) || 0,
+            totalRevenue: Number(counts.total_revenue) || 0,
         };
     } catch (error) {
         console.error("Error getting admin stats:", error);
@@ -83,16 +69,9 @@ export const getAdminStats = async () => {
 
 export const validateAdminCredentials = async (email: string, password: string) => {
     console.log(`[validateAdminCredentials] Checking email: ${email}`);
-    const { data: admin, error } = await supabaseAdmin
-        .from('admins')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-    
-    if (error) {
-        console.error(`[validateAdminCredentials] DB Error:`, error);
-        return null;
-    }
+    const [admin] = await sql`
+        SELECT * FROM admins WHERE email = ${email} LIMIT 1
+    `;
     
     if (!admin) {
         console.log(`[validateAdminCredentials] Admin not found for email: ${email}`);

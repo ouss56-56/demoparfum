@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { notifyNewOrder, notifyLowStock } from "./notification-service";
 import { Errors } from "@/lib/errors";
 import { unstable_cache, revalidateTag } from "next/cache";
@@ -105,12 +106,11 @@ export const createOrder = async (input: CreateOrderInput) => {
     // Prepare items for RPC
     // We need to fetch prices and volume data first for the RPC
     const productIds = [...new Set(input.items.map(i => i.productId))];
-    const { data: products, error: pError } = await supabaseAdmin
-        .from('products')
-        .select('*')
-        .in('id', productIds);
+    const products = await sql`
+        SELECT * FROM products WHERE id IN (${productIds})
+    `;
 
-    if (pError || !products) throw new Error("Failed to fetch products for order validation");
+    if (!products || products.length === 0) throw new Error("Failed to fetch products for order validation");
 
     const productsMap = new Map(products.map(p => [p.id, p]));
     const itemsWithData = input.items.map(item => {
@@ -166,19 +166,19 @@ export const createOrder = async (input: CreateOrderInput) => {
         itemsSummary: itemsWithData.map(i => ({ id: i.productId, price: i.price, qty: i.quantity }))
     });
 
-    // Call Supabase RPC for atomic transaction
-    const { data: orderId, error } = await supabaseAdmin.rpc('create_order', {
-        p_customer_id: input.customerId,
-        p_items: itemsWithData,
-        p_wilaya_name: input.wilayaName || null,
-        p_wilaya_number: input.wilayaNumber || null,
-        p_notes: input.notes || "Order placed successfully."
-    });
+    // Call Supabase RPC for atomic transaction via direct SQL
+    const JSONItems = JSON.stringify(itemsWithData);
+    const [result] = await sql`
+        SELECT create_order(
+            ${input.customerId}::UUID, 
+            ${JSONItems}::JSONB, 
+            ${input.wilayaName || null}, 
+            ${input.wilayaNumber || null}, 
+            ${input.notes || "Order placed successfully."}
+        ) as order_id
+    `;
 
-    if (error) {
-        console.error("Order creation RPC error:", error);
-        throw new Error(error.message);
-    }
+    const orderId = result.order_id;
 
     (revalidateTag as any)(`orders:${input.customerId}`);
     (revalidateTag as any)("orders");
@@ -199,17 +199,29 @@ export const createOrder = async (input: CreateOrderInput) => {
 // ── READ ──────────────────────────────────────────────────────────────────
 export const getOrders = async (limit = 50, startAfterStr?: string): Promise<Order[]> => {
     try {
-        let query = supabaseAdmin
-            .from('orders')
-            .select('*, customers(id, shop_name), order_items(*, products(*))')
-            .order('created_at', { ascending: false });
-        
-        if (startAfterStr) {
-            query = query.lt('created_at', startAfterStr);
-        }
-
-        const { data, error } = await query.limit(limit);
-        if (error) throw error;
+        const data = await sql`
+            SELECT 
+                o.*,
+                c.id as customer_id, c.shop_name as customer_shop_name,
+                (
+                    SELECT json_agg(json_build_object(
+                        'id', oi.id,
+                        'product_id', oi.product_id,
+                        'quantity', oi.quantity,
+                        'price', oi.price,
+                        'volume_id', oi.volume_id,
+                        'volume_data', oi.volume_data,
+                        'products', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                    ))
+                    FROM order_items oi WHERE oi.order_id = o.id
+                ) as order_items,
+                (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.id
+            ${startAfterStr ? sql`WHERE o.created_at < ${startAfterStr}` : sql``}
+            ORDER BY o.created_at DESC
+            LIMIT ${limit}
+        `;
 
         return (data || []).map(mapOrder);
     } catch (err) {
@@ -220,13 +232,28 @@ export const getOrders = async (limit = 50, startAfterStr?: string): Promise<Ord
 
 export const getOrderById = async (id: string): Promise<Order | null> => {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('orders')
-            .select('*, customers(*), order_items(*, products(*))')
-            .eq('id', id)
-            .single();
+        const [data] = await sql`
+            SELECT 
+                o.*,
+                (
+                    SELECT json_agg(json_build_object(
+                        'id', oi.id,
+                        'product_id', oi.product_id,
+                        'quantity', oi.quantity,
+                        'price', oi.price,
+                        'volume_id', oi.volume_id,
+                        'volume_data', oi.volume_data,
+                        'products', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                    ))
+                    FROM order_items oi WHERE oi.order_id = o.id
+                ) as order_items,
+                (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers
+            FROM orders o
+            WHERE o.id = ${id}
+            LIMIT 1
+        `;
 
-        if (error || !data) return null;
+        if (!data) return null;
         return mapOrder(data);
     } catch (err) {
         console.error("Order fetch error (getOrderById):", err);
@@ -279,13 +306,8 @@ export const getOrdersByCustomer = (customerId: string, limit = 50, skip = 0): P
 };
 
 export const updateOrderStatus = async (orderId: string, status: string, changedBy: string = "ADMIN", message?: string) => {
-    const { data: order, error: fetchError } = await supabaseAdmin
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .single();
-
-    if (fetchError || !order) throw new Error("Order not found");
+    const [order] = await sql`SELECT * FROM orders WHERE id = ${orderId}`;
+    if (!order) throw new Error("Order not found");
     
     const logs = order.logs || [];
     logs.push({
@@ -300,17 +322,17 @@ export const updateOrderStatus = async (orderId: string, status: string, changed
     // STOCK RETURN ON CANCELLATION
     if (status === "CANCELLED" && order.status !== "CANCELLED") {
         try {
-            const { data: items } = await supabaseAdmin.from('order_items').select('*').eq('order_id', orderId);
+            const items = await sql`SELECT * FROM order_items WHERE order_id = ${orderId}`;
             if (items && items.length > 0) {
                 for (const item of items) {
                     try {
                         const weight = item.volume_data?.weight || parseInt((item.volume_id || "").replace(/\D/g, "")) || 0;
                         const totalReturn = weight * (item.quantity || 1);
                         if (totalReturn > 0) {
-                            // Fetch current stock from 'stock' column
-                            const { data: p } = await supabaseAdmin.from('products').select('stock').eq('id', item.product_id).single();
+                            // Fetch current stock
+                            const [p] = await sql`SELECT stock FROM products WHERE id = ${item.product_id}`;
                             if (p) {
-                                await supabaseAdmin.from('products').update({ stock: (p.stock || 0) + totalReturn }).eq('id', item.product_id);
+                                await sql`UPDATE products SET stock = ${Number(p.stock || 0) + totalReturn} WHERE id = ${item.product_id}`;
                             }
                         }
                     } catch (itemErr) {
@@ -340,17 +362,20 @@ export const updateOrderStatus = async (orderId: string, status: string, changed
         });
     }
 
-    const { data: updatedOrder, error: updateError } = await supabaseAdmin
-        .from('orders')
-        .update(updateData)
-        .eq('id', orderId)
-        .select('*, order_items(*, products(*))')
-        .single();
+    const [updatedOrder] = await sql`
+        UPDATE orders SET ${sql(updateData)}
+        WHERE id = ${orderId}
+        RETURNING *
+    `;
 
-    if (updateError) throw updateError;
+    if (!updatedOrder) throw new Error("Order update failed");
+
+    // Fetch details for mapOrder
+    const finalOrder = await getOrderById(orderId);
+    if (!finalOrder) throw new Error("Order update returned no data");
 
     (revalidateTag as any)("orders");
-    return mapOrder(updatedOrder);
+    return finalOrder;
 };
 
 export const updateOrderShipping = async (orderId: string, data: {
@@ -364,28 +389,24 @@ export const updateOrderShipping = async (orderId: string, data: {
         date: (data.shippingDate || new Date()).toISOString(),
     };
 
-    const { error } = await supabaseAdmin
-        .from('orders')
-        .update({ shipping })
-        .eq('id', orderId);
+    await sql`UPDATE orders SET shipping = ${JSON.stringify(shipping)}::JSONB WHERE id = ${orderId}`;
 
-    if (error) throw error;
     (revalidateTag as any)("orders");
     return { success: true };
 };
 
 export const getReorderItems = async (orderId: string): Promise<any[]> => {
-    const { data, error } = await supabaseAdmin
-        .from('order_items')
-        .select('*, products(name)')
-        .eq('order_id', orderId);
-
-    if (error) throw error;
+    const data = await sql`
+        SELECT oi.*, p.name as product_name
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ${orderId}
+    `;
     
     return (data || []).map((item: any) => ({
         productId: item.product_id,
         quantity: item.quantity,
         volumeId: item.volume_id,
-        name: item.products?.name || "Product",
+        name: item.product_name || "Product",
     }));
 };

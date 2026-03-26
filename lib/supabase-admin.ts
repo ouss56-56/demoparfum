@@ -9,9 +9,10 @@ function getSupabaseAdmin(): SupabaseClient {
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error(
-      'Supabase Admin: Missing environment variables (NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY).'
+    console.error(
+      'Supabase Admin: Missing environment variables (NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY). Admin client will not be initialized.'
     );
+    return null as any;
   }
 
   _supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {

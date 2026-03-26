@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export interface Customer {
@@ -31,11 +32,9 @@ export const registerCustomer = async (data: {
     role?: string;
 }) => {
     // Check if phone is already registered
-    const { data: existing } = await supabaseAdmin
-        .from('customers')
-        .select('id')
-        .eq('phone', data.phone)
-        .maybeSingle();
+    const [existing] = await sql`
+        SELECT id FROM customers WHERE phone = ${data.phone} LIMIT 1
+    `;
     
     if (existing) {
         throw new Error("A customer with this phone number already exists");
@@ -44,23 +43,16 @@ export const registerCustomer = async (data: {
     const passwordHash = await bcrypt.hash(data.password, 10);
     const { password, ...rest } = data;
 
-    const { data: newCustomer, error } = await supabaseAdmin
-        .from('customers')
-        .insert([{
-            name: data.name,
-            phone: data.phone,
-            password_hash: passwordHash,
-            shop_name: data.shopName,
-            wilaya: `${data.wilayaNumber} - ${data.wilayaName}`,
-            wilaya_id: Number(data.wilayaNumber),
-            commune: data.commune,
-            address: data.address,
-            role: data.role || "TRADER"
-        }])
-        .select()
-        .single();
-
-    if (error) throw error;
+    const [newCustomer] = await sql`
+        INSERT INTO customers (
+            name, phone, password_hash, shop_name, wilaya, wilaya_id, commune, address, role
+        ) VALUES (
+            ${data.name}, ${data.phone}, ${passwordHash}, ${data.shopName}, 
+            ${`${data.wilayaNumber} - ${data.wilayaName}`}, ${Number(data.wilayaNumber)}, 
+            ${data.commune}, ${data.address}, ${data.role || "TRADER"}
+        )
+        RETURNING *
+    `;
 
     return { 
         id: newCustomer.id, 
@@ -77,20 +69,18 @@ export const registerCustomer = async (data: {
 // ── READ ──────────────────────────────────────────────────────────────────
 export const getCustomerById = async (id: string): Promise<Customer | null> => {
     try {
-        const { data: customer, error: custError } = await supabaseAdmin
-            .from('customers')
-            .select('*')
-            .eq('id', id)
-            .single();
+        const [customer] = await sql`
+            SELECT * FROM customers WHERE id = ${id} LIMIT 1
+        `;
 
-        if (custError || !customer) return null;
+        if (!customer) return null;
 
         // Fetch orders count and recent orders
-        const { data: orders, error: ordersError } = await supabaseAdmin
-            .from('orders')
-            .select('*')
-            .eq('customer_id', id)
-            .order('created_at', { ascending: false });
+        const orders = await sql`
+            SELECT * FROM orders 
+            WHERE customer_id = ${id} 
+            ORDER BY created_at DESC
+        `;
 
         return {
             id: customer.id,
@@ -114,13 +104,11 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
 
 export const getCustomerByPhone = async (phone: string): Promise<Customer | null> => {
     try {
-        const { data: customer, error } = await supabaseAdmin
-            .from('customers')
-            .select('*')
-            .eq('phone', phone)
-            .maybeSingle();
+        const [customer] = await sql`
+            SELECT * FROM customers WHERE phone = ${phone} LIMIT 1
+        `;
 
-        if (error || !customer) return null;
+        if (!customer) return null;
 
         return {
             id: customer.id,
@@ -143,18 +131,26 @@ export const getCustomerByPhone = async (phone: string): Promise<Customer | null
 
 export const getCustomers = async (limit = 1000, startAfterStr?: string): Promise<Customer[]> => {
     try {
-        let query = supabaseAdmin
-            .from('customers')
-            .select('*, orders(id)')
-            .order('created_at', { ascending: false });
-        
+        let customers;
         if (startAfterStr) {
-            query = query.lt('created_at', startAfterStr);
+            customers = await sql`
+                SELECT *, 
+                    (SELECT count(*) FROM orders WHERE orders.customer_id = customers.id) as orders_count
+                FROM customers 
+                WHERE created_at < ${startAfterStr}
+                ORDER BY created_at DESC 
+                LIMIT ${limit}
+            `;
+        } else {
+            customers = await sql`
+                SELECT *, 
+                    (SELECT count(*) FROM orders WHERE orders.customer_id = customers.id) as orders_count
+                FROM customers 
+                ORDER BY created_at DESC 
+                LIMIT ${limit}
+            `;
         }
         
-        const { data: customers, error } = await query.limit(limit);
-        if (error) throw error;
-
         return (customers || []).map(customer => ({
             id: customer.id,
             phone: customer.phone,
@@ -166,8 +162,8 @@ export const getCustomers = async (limit = 1000, startAfterStr?: string): Promis
             role: customer.role || "TRADER",
             status: customer.status || "ACTIVE",
             createdAt: new Date(customer.created_at),
-            ordersCount: (customer as any).orders?.length || 0,
-            _count: { orders: (customer as any).orders?.length || 0 }
+            ordersCount: Number(customer.orders_count) || 0,
+            _count: { orders: Number(customer.orders_count) || 0 }
         }));
     } catch (err) {
         console.error("Customers fetch error (getCustomers):", err);
@@ -199,43 +195,29 @@ export const updateCustomer = async (
         updateObj.wilaya_id = Number(data.wilayaNumber);
     }
 
-    const { data: updated, error } = await supabaseAdmin
-        .from('customers')
-        .update(updateObj)
-        .eq('id', id)
-        .select()
-        .single();
+    const [updated] = await sql`
+        UPDATE customers SET ${sql(updateObj)}
+        WHERE id = ${id}
+        RETURNING *
+    `;
 
-    if (error) throw error;
     return { id, ...data };
 };
 
 // ── ADMINISTRATIVE ────────────────────────────────────────────────────────
 export const suspendCustomer = async (id: string, status: "ACTIVE" | "SUSPENDED") => {
-    const { data, error } = await supabaseAdmin
-        .from('customers')
-        .update({ status })
-        .eq('id', id)
-        .select()
-        .single();
-    
-    if (error) throw error;
+    const [data] = await sql`
+        UPDATE customers SET status = ${status} WHERE id = ${id} RETURNING *
+    `;
     return data;
 };
 
 export const deleteCustomer = async (id: string) => {
-    // Delete authentication user if possible, or just the record
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
-    if (authError) {
-        console.warn("Could not delete auth user (maybe already gone):", authError.message);
-    }
-
-    const { error } = await supabaseAdmin
-        .from('customers')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
+    // Note: We can only delete the DB record. 
+    // If Supabase Auth is being used, we can't delete the auth user without the service role key.
+    // However, this project seems to use custom JWTs mostly.
+    
+    await sql`DELETE FROM customers WHERE id = ${id}`;
     return true;
 };
 
