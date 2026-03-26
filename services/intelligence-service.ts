@@ -34,7 +34,7 @@ export const getRestockSuggestions = async () => {
         const weightSold30d = recentDemandMap.get(product.id) || 0;
         const avgDailyWeightSales = weightSold30d / 30;
 
-        const currentStock = product.stock || 0;
+        const currentStock = product.stock_weight || 0;
         const estimatedDaysLeft = avgDailyWeightSales > 0 ? Math.floor(currentStock / avgDailyWeightSales) : 999;
 
         const lowStockThreshold = 500; // Simplified internal threshold
@@ -95,7 +95,7 @@ export const getDeadStock = async () => {
     recentOrders.forEach((item: any) => activeProductIds.add(item.product_id));
 
     const products = await sql`
-        SELECT * FROM products WHERE stock > 0
+        SELECT * FROM products WHERE stock_weight > 0
     `;
 
     if (!products) return [];
@@ -105,13 +105,13 @@ export const getDeadStock = async () => {
 
     return deadProducts.map((p: any) => {
         const basePrice = Number(p.base_price || 0);
-        const stock = p.stock || 0;
+        const stock_weight = p.stock_weight || 0;
         const createdAt = new Date(p.created_at);
         
-        const valueTieUp = basePrice * (stock / 100); 
+        const valueTieUp = basePrice * (stock_weight / 100); 
         return {
             ...p,
-            stock,
+            stock: stock_weight,
             valueTieUp,
             daysSinceAdded: Math.floor((new Date().getTime() - createdAt.getTime()) / (1000 * 3600 * 24))
         };
@@ -220,16 +220,16 @@ export const getProfitAnalytics = async () => {
 // ── INVENTORY HEALTH SCORE ────────────────────────────────────────────────
 export const getInventoryHealthScore = async () => {
     let score = 100;
-    const products = await sql`SELECT stock FROM products`;
+    const products = await sql`SELECT stock_weight FROM products`;
     if (!products) return 100;
 
-    const lowStockCount = products.filter((p: any) => (p.stock || 0) <= 500).length;
+    const lowStockCount = products.filter((p: any) => (p.stock_weight || 0) <= 500).length;
     score -= (lowStockCount * 2); 
 
     const deadStock = await getDeadStock();
     score -= (deadStock.length * 5); 
 
-    const oosCount = products.filter((p: any) => (p.stock || 0) === 0).length;
+    const oosCount = products.filter((p: any) => (p.stock_weight || 0) === 0).length;
     score -= (oosCount * 5); 
 
     return Math.max(0, score);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
 export async function POST(request: NextRequest) {
     try {
@@ -13,24 +14,18 @@ export async function POST(request: NextRequest) {
         const buffer = await file.arrayBuffer();
         const fileExt = file.name.split(".").pop() || "png";
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `products/${fileName}`;
+        
+        const uploadDir = path.join(process.cwd(), "public", "products");
+        const filePath = path.join(uploadDir, fileName);
 
-        const { data, error } = await supabaseAdmin.storage
-            .from("images")
-            .upload(filePath, buffer, {
-                contentType: file.type,
-                upsert: true
-            });
+        // Ensure directory exists
+        await mkdir(uploadDir, { recursive: true });
 
-        if (error) {
-            console.error("[StorageUpload] Error:", error.message, error);
-            throw error;
-        }
+        // Securely write file to the local directory
+        await writeFile(filePath, Buffer.from(buffer));
 
-        // Get public URL
-        const { data: { publicUrl } } = supabaseAdmin.storage
-            .from("images")
-            .getPublicUrl(filePath);
+        // Get public URL (relative for Next.js)
+        const publicUrl = `/products/${fileName}`;
 
         return NextResponse.json({ url: publicUrl });
     } catch (error) {

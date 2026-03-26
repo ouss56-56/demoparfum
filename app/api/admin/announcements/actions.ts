@@ -19,7 +19,7 @@ export async function createAnnouncement(data: { title: string, message: string,
 
 export async function deleteAnnouncement(id: string) {
     try {
-        await sql`DELETE FROM notifications WHERE id = ${id} AND type = 'ANNOUNCEMENT'`;
+        await sql`DELETE FROM notifications WHERE id = ${id}::UUID AND type = 'ANNOUNCEMENT'`;
         
         revalidatePath('/[locale]/admin/(protected)/announcements', 'page');
         return { success: true };
