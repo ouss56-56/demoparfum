@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { requireAdminSession } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
@@ -18,60 +18,38 @@ export async function GET(request: Request) {
         let filename = "report.csv";
 
         if (type === "inventory") {
-            const { data: products, error } = await supabaseAdmin
-                .from("products")
-                .select("*")
-                .order("name", { ascending: true });
-
-            if (error) throw error;
+            const products = await sql`SELECT * FROM products ORDER BY name ASC`;
 
             csvData = "ID,Name,Brand,Category,BasePrice,Stock,LowStockThreshold\n";
-            products?.forEach((p) => {
-                csvData += `${p.id},"${p.name}","${p.brand}","${p.category_id || ''}",${p.base_price},${p.stock},${p.low_stock_threshold || 500}\n`;
+            (products || []).forEach((p: any) => {
+                csvData += `${p.id},"${p.name}","${p.brand}","${p.category_id || ''}",${p.base_price},${p.stock_weight || 0},${p.low_stock_threshold || 500}\n`;
             });
             filename = `inventory_report_${new Date().toISOString().split('T')[0]}.csv`;
         }
 
         else if (type === "sales") {
-            const { data: orders, error } = await supabaseAdmin
-                .from("orders")
-                .select("*, customers(shop_name), order_items(quantity)")
-                .neq("status", "CANCELLED")
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
+            const orders = await sql`
+                SELECT o.*, 
+                    (SELECT c.shop_name FROM customers c WHERE c.id = o.customer_id) as shop_name,
+                    (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id) as total_items
+                FROM orders o
+                WHERE o.status != 'CANCELLED'
+                ORDER BY o.created_at DESC
+            `;
 
             csvData = "OrderID,Date,Customer,TotalItems,TotalRevenue,Status\n";
-            orders?.forEach((o: any) => {
+            (orders || []).forEach((o: any) => {
                 const createdAt = new Date(o.created_at);
-                const totalItems = (o.order_items || []).reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
-                const shopName = o.customers?.shop_name || "";
-                
-                csvData += `${o.id},${createdAt.toISOString().split('T')[0]},"${shopName}",${totalItems},${o.total_price},${o.status}\n`;
+                csvData += `${o.id},${createdAt.toISOString().split('T')[0]},"${o.shop_name || ''}",${o.total_items || 0},${o.total_price},${o.status}\n`;
             });
             filename = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
         }
         else if (type === "customers") {
-            // Complex aggregation: customer total spend
-            // In a real app, we might use a view or a group by query
-            // For now, we'll mimic the manual aggregation if simple queries are preferred
-            
-            const { data: customers, error: cError } = await supabaseAdmin
-                .from("customers")
-                .select("*")
-                .order("name", { ascending: true });
-
-            if (cError) throw cError;
-
-            const { data: orders, error: oError } = await supabaseAdmin
-                .from("orders")
-                .select("customer_id, total_price")
-                .neq("status", "CANCELLED");
-
-            if (oError) throw oError;
+            const customers = await sql`SELECT * FROM customers ORDER BY name ASC`;
+            const orders = await sql`SELECT customer_id, total_price FROM orders WHERE status != 'CANCELLED'`;
 
             const customerOrdersMap = new Map<string, { count: number; totalSpent: number }>();
-            orders?.forEach((o) => {
+            (orders || []).forEach((o: any) => {
                 if (o.customer_id) {
                     const curr = customerOrdersMap.get(o.customer_id) || { count: 0, totalSpent: 0 };
                     curr.count++;
@@ -81,7 +59,7 @@ export async function GET(request: Request) {
             });
 
             csvData = "CustomerID,ShopName,ContactName,Phone,Wilaya,TotalOrders,TotalSpent\n";
-            customers?.forEach((c) => {
+            (customers || []).forEach((c: any) => {
                 const stats = customerOrdersMap.get(c.id) || { count: 0, totalSpent: 0 };
                 csvData += `${c.id},"${c.shop_name}","${c.name}","${c.phone}","${c.wilaya}",${stats.count},${stats.totalSpent}\n`;
             });
@@ -90,7 +68,6 @@ export async function GET(request: Request) {
             return new NextResponse("Invalid report type", { status: 400 });
         }
 
-        // Return CSV file with UTF-8 BOM for Excel compatibility
         const bom = "\ufeff";
         return new NextResponse(bom + csvData, {
             status: 200,

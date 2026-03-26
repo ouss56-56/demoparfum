@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { requireAdminSession } from "@/lib/admin-auth";
 
 export async function PUT(request: Request) {
     try {
-        const admin = await requireAdminSession();
-
+        await requireAdminSession();
 
         const body = await request.json();
         const { orderId, amountPaid } = body;
@@ -14,14 +13,11 @@ export async function PUT(request: Request) {
             return NextResponse.json({ success: false, message: "Invalid input: orderId and amountPaid (>= 0) required" }, { status: 400 });
         }
 
-        // Fetch the order to calculate balance
-        const { data: order, error: fetchError } = await supabaseAdmin
-            .from("orders")
-            .select("total_price, amount_paid, payment_status, logs")
-            .eq("id", orderId)
-            .single();
+        const [order] = await sql`
+            SELECT total_price, amount_paid, payment_status, logs FROM orders WHERE id = ${orderId} LIMIT 1
+        `;
 
-        if (fetchError || !order) {
+        if (!order) {
             return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
         }
 
@@ -29,7 +25,6 @@ export async function PUT(request: Request) {
         const newPaymentStatus = amountPaid >= totalPrice ? "PAID" : amountPaid > 0 ? "PARTIAL" : "UNPAID";
         const balanceDue = Math.max(0, totalPrice - amountPaid);
 
-        // Add payment log entry
         const existingLogs = order.logs || [];
         const newLog = {
             id: crypto.randomUUID(),
@@ -39,20 +34,14 @@ export async function PUT(request: Request) {
             createdAt: new Date().toISOString(),
         };
 
-        const { error: updateError } = await supabaseAdmin
-            .from("orders")
-            .update({
-                amount_paid: amountPaid,
-                payment_status: newPaymentStatus,
-                updated_at: new Date().toISOString(),
-                logs: [...existingLogs, newLog],
-            })
-            .eq("id", orderId);
-
-        if (updateError) {
-            console.error("Payment update error:", updateError);
-            return NextResponse.json({ success: false, message: updateError.message }, { status: 500 });
-        }
+        await sql`
+            UPDATE orders SET
+                amount_paid = ${amountPaid},
+                payment_status = ${newPaymentStatus},
+                updated_at = NOW(),
+                logs = ${JSON.stringify([...existingLogs, newLog])}::jsonb
+            WHERE id = ${orderId}
+        `;
 
         return NextResponse.json({
             success: true,

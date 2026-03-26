@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 export async function GET() {
     try {
-        const { data, error } = await supabaseAdmin
-            .from("brands")
-            .select("name")
-            .order("name", { ascending: true });
+        const data = await sql`SELECT name FROM brands ORDER BY name ASC`;
 
-        if (error) throw error;
-
-        const sortedBrands = data.map(b => b.name);
+        const sortedBrands = (data || []).map((b: any) => b.name);
         
         const response = NextResponse.json({ 
             success: true, 
             data: sortedBrands 
         });
 
-        // Cache for 1 hour
         response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
         
         return response;

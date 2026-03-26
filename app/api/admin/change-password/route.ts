@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyJwtToken } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -27,14 +27,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Current and new password are required" }, { status: 400 });
         }
 
-        // Fetch admin by ID (JWT sub stores admin.id, not phone)
-        const { data: admin, error: fetchError } = await supabaseAdmin
-            .from("admins")
-            .select("*")
-            .eq("id", adminId)
-            .single();
+        const [admin] = await sql`SELECT * FROM admins WHERE id = ${adminId} LIMIT 1`;
 
-        if (fetchError || !admin) {
+        if (!admin) {
             return NextResponse.json({ success: false, error: "Admin not found" }, { status: 404 });
         }
 
@@ -46,12 +41,7 @@ export async function POST(request: Request) {
 
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-        const { error: updateError } = await supabaseAdmin
-            .from("admins")
-            .update({ password_hash: hashedNewPassword })
-            .eq("id", adminId);
-
-        if (updateError) throw updateError;
+        await sql`UPDATE admins SET password_hash = ${hashedNewPassword} WHERE id = ${adminId}`;
 
         return NextResponse.json({ success: true, message: "Password updated successfully" }, { status: 200 });
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { requireAdminSession } from "@/lib/admin-auth";
 import bcrypt from "bcryptjs";
 
@@ -7,7 +7,6 @@ export async function POST(request: Request) {
     try {
         await requireAdminSession();
 
-        // ── Parse Body ──────────────────────────────────────────────────
         const body = await request.json();
         const { customerId, newPassword } = body;
 
@@ -25,25 +24,14 @@ export async function POST(request: Request) {
             );
         }
 
-        // ── Verify Customer Exists ──────────────────────────────────────
-        const { data: customer, error: fetchError } = await supabaseAdmin
-            .from("customers")
-            .select("id")
-            .eq("id", customerId)
-            .single();
+        const [customer] = await sql`SELECT id FROM customers WHERE id = ${customerId} LIMIT 1`;
 
-        if (fetchError || !customer) {
+        if (!customer) {
             return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
         }
 
-        // ── Hash & Update ───────────────────────────────────────────────
         const passwordHash = await bcrypt.hash(newPassword, 10);
-        const { error: updateError } = await supabaseAdmin
-            .from("customers")
-            .update({ password_hash: passwordHash })
-            .eq("id", customerId);
-
-        if (updateError) throw updateError;
+        await sql`UPDATE customers SET password_hash = ${passwordHash} WHERE id = ${customerId}`;
 
         return NextResponse.json(
             { success: true, message: "Password reset successfully" },

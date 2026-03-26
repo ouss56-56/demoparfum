@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyJwtToken } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { logAdminAction } from "@/services/audit-service";
 
 export async function POST() {
@@ -20,13 +20,10 @@ export async function POST() {
 
         const adminId = payload.sub as string;
 
-        // Reset sales_units_sold and sales_revenue on all products
-        const { error } = await supabaseAdmin
-            .from("products")
-            .update({ sales_units_sold: 0, sales_revenue: 0 })
-            .neq("id", "00000000-0000-0000-0000-000000000000"); // match all rows
-
-        if (error) throw error;
+        await sql`
+            UPDATE products SET sales_units_sold = 0, sales_revenue = 0
+            WHERE id != '00000000-0000-0000-0000-000000000000'
+        `;
 
         await logAdminAction({
             adminId,

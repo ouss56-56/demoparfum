@@ -1,4 +1,3 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
 

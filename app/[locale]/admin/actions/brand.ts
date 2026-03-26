@@ -17,6 +17,15 @@ export async function createBrand(formData: FormData) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
     try {
+        // Check if brand with same name or slug already exists
+        const [existing] = await sql`
+            SELECT id FROM brands WHERE name = ${name} OR slug = ${slug} LIMIT 1
+        `;
+
+        if (existing) {
+            return { success: false, error: `Brand "${name}" already exists.` };
+        }
+
         const [brand] = await sql`
             INSERT INTO brands (name, slug, description)
             VALUES (${name}, ${slug}, ${description})
@@ -26,9 +35,9 @@ export async function createBrand(formData: FormData) {
         await logEvent("BRAND_CREATED", brand.id, `Brand "${name}" created`);
         revalidatePath("/", "layout");
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Create brand error:", error);
-        return { success: false, error: "Failed to create brand. It may already exist." };
+        return { success: false, error: error.message || "Failed to create brand" };
     }
 }
 

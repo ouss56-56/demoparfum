@@ -4,7 +4,7 @@
 
 :root {
   --background: #FDFDFD;
-  --foreground: #333333;
+  --foreground: #1a1a1a;
   --primary: #D4AF37;
   --secondary: #F5F5DC;
   --accent: #B8860B;
@@ -17,6 +17,11 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-sans), sans-serif;
+  font-weight: 450;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
 }
 
 h1,
@@ -27,6 +32,14 @@ h5,
 h6 {
   font-family: var(--font-serif), serif;
   color: var(--accent);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ── Enhanced Text Rendering ─────────────────────────────────── */
+p, span, label, a, li, td, th, input, textarea, select, button {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Utility Classes ──────────────────────────────────────────── */

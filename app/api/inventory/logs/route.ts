@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -10,14 +10,12 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const { data, error } = await supabaseAdmin
-            .from("inventory_logs")
-            .select("*")
-            .eq("product_id", productId)
-            .order("created_at", { ascending: false })
-            .limit(10);
-
-        if (error) throw error;
+        const data = await sql`
+            SELECT * FROM inventory_logs
+            WHERE product_id = ${productId}
+            ORDER BY created_at DESC
+            LIMIT 10
+        `;
 
         return NextResponse.json({ success: true, data });
     } catch (error) {

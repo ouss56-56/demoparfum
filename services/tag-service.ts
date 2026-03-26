@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidateTag } from "next/cache";
 
 function generateSlug(name: string): string {
@@ -7,32 +7,26 @@ function generateSlug(name: string): string {
 
 // ── READ ──────────────────────────────────────────────────────────────────
 export const getTags = async () => {
-    const { data, error } = await supabaseAdmin
-        .from('tags')
-        .select('*, products(id)')
-        .order('name', { ascending: true });
+    const tags = await sql`SELECT * FROM tags ORDER BY name ASC`;
 
-    if (error) throw error;
-
-    return (data || []).map(tag => ({
+    return (tags || []).map((tag: any) => ({
         id: tag.id,
         name: tag.name,
         slug: tag.slug,
         createdAt: new Date(tag.created_at),
-        products: tag.products || []
+        products: []
     }));
 };
 
 // ── CREATE ────────────────────────────────────────────────────────────────
 export const createTag = async (data: { name: string }) => {
     const slug = generateSlug(data.name);
-    const { data: newTag, error } = await supabaseAdmin
-        .from('tags')
-        .insert([{ name: data.name, slug }])
-        .select()
-        .single();
+    const [newTag] = await sql`
+        INSERT INTO tags (name, slug)
+        VALUES (${data.name}, ${slug})
+        RETURNING *
+    `;
 
-    if (error) throw error;
     (revalidateTag as any)('tags');
     return { id: newTag.id, name: newTag.name, slug: newTag.slug };
 };
@@ -40,26 +34,19 @@ export const createTag = async (data: { name: string }) => {
 // ── UPDATE ────────────────────────────────────────────────────────────────
 export const updateTag = async (id: string, data: { name: string }) => {
     const slug = generateSlug(data.name);
-    const { data: updatedTag, error } = await supabaseAdmin
-        .from('tags')
-        .update({ name: data.name, slug })
-        .eq('id', id)
-        .select()
-        .single();
+    const [updatedTag] = await sql`
+        UPDATE tags SET name = ${data.name}, slug = ${slug}
+        WHERE id = ${id}
+        RETURNING *
+    `;
 
-    if (error) throw error;
     (revalidateTag as any)('tags');
     return { id: updatedTag.id, name: updatedTag.name, slug: updatedTag.slug };
 };
 
 // ── DELETE ────────────────────────────────────────────────────────────────
 export const deleteTag = async (id: string) => {
-    const { error } = await supabaseAdmin
-        .from('tags')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
+    await sql`DELETE FROM tags WHERE id = ${id}`;
     (revalidateTag as any)('tags');
     return { id };
 };

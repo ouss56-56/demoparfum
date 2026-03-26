@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 // ── LOGGING ─────────────────────────────────────────────────────────────────
 export const logAdminAction = async (data: {
@@ -9,13 +9,10 @@ export const logAdminAction = async (data: {
     metadata?: Record<string, unknown>;
 }) => {
     try {
-        await supabaseAdmin.from('admin_logs').insert([{
-            admin_id: data.adminId,
-            action: data.action,
-            target_type: data.targetType,
-            target_id: data.targetId || null,
-            metadata: data.metadata || null
-        }]);
+        await sql`
+            INSERT INTO admin_logs (admin_id, action, target_type, target_id, metadata)
+            VALUES (${data.adminId}, ${data.action}, ${data.targetType}, ${data.targetId || null}, ${JSON.stringify(data.metadata || {})}::jsonb)
+        `;
     } catch (e) {
         console.error("Failed to log admin action:", e);
     }
@@ -29,13 +26,10 @@ export const logSystemError = async (data: {
     metadata?: Record<string, unknown>;
 }) => {
     try {
-        await supabaseAdmin.from('system_errors').insert([{
-            message: data.message,
-            path: data.path || null,
-            method: data.method || null,
-            stack_trace: data.stackTrace || null,
-            metadata: data.metadata || null
-        }]);
+        await sql`
+            INSERT INTO system_errors (message, path, method, stack_trace, metadata)
+            VALUES (${data.message}, ${data.path || null}, ${data.method || null}, ${data.stackTrace || null}, ${JSON.stringify(data.metadata || {})}::jsonb)
+        `;
     } catch (e) {
         console.error("Failed to log system error:", e);
     }
@@ -44,18 +38,13 @@ export const logSystemError = async (data: {
 // ── READ LOGS ─────────────────────────────────────────────────────────────
 export const getAdminLogs = async (limit = 100) => {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('admin_logs')
-            .select('*, admin:customers(name, email)')
-            .order('created_at', { ascending: false })
-            .limit(limit);
+        const data = await sql`
+            SELECT * FROM admin_logs
+            ORDER BY created_at DESC
+            LIMIT ${limit}
+        `;
 
-        if (error) {
-            console.error("Failed to fetch admin logs:", error);
-            return [];
-        }
-
-        return (data || []).map(log => ({
+        return (data || []).map((log: any) => ({
             id: log.id,
             adminId: log.admin_id,
             action: log.action,
@@ -63,7 +52,7 @@ export const getAdminLogs = async (limit = 100) => {
             targetId: log.target_id,
             metadata: log.metadata,
             createdAt: new Date(log.created_at),
-            admin: log.admin ? { name: log.admin.name, email: log.admin.email } : { name: 'System', email: '' }
+            admin: { name: 'Admin', email: '' }
         }));
     } catch (e) {
         console.error("getAdminLogs failed:", e);
@@ -73,18 +62,13 @@ export const getAdminLogs = async (limit = 100) => {
 
 export const getSystemErrors = async (limit = 100) => {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('system_errors')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(limit);
+        const data = await sql`
+            SELECT * FROM system_errors
+            ORDER BY created_at DESC
+            LIMIT ${limit}
+        `;
 
-        if (error) {
-            console.error("Failed to fetch system errors:", error);
-            return [];
-        }
-
-        return (data || []).map(err => ({
+        return (data || []).map((err: any) => ({
             id: err.id,
             ...err,
             createdAt: new Date(err.created_at),
@@ -105,38 +89,34 @@ export const getSystemHealth = async () => {
 
     try {
         const [
-            productsCount,
-            customersCount,
-            ordersCount,
-            ordersToday,
-            recentErrors
+            [productsCount],
+            [customersCount],
+            [ordersCount],
+            [ordersToday],
+            [recentErrors],
+            lowStockData
         ] = await Promise.all([
-            supabaseAdmin.from('products').select('id', { count: 'exact', head: true }),
-            supabaseAdmin.from('customers').select('id', { count: 'exact', head: true }),
-            supabaseAdmin.from('orders').select('id', { count: 'exact', head: true }),
-            supabaseAdmin.from('orders').select('id', { count: 'exact', head: true }).gte('created_at', today.toISOString()),
-            supabaseAdmin.from('system_errors').select('id', { count: 'exact', head: true }).gte('created_at', yesterday.toISOString())
+            sql`SELECT COUNT(*) as count FROM products`,
+            sql`SELECT COUNT(*) as count FROM customers`,
+            sql`SELECT COUNT(*) as count FROM orders`,
+            sql`SELECT COUNT(*) as count FROM orders WHERE created_at >= ${today.toISOString()}`,
+            sql`SELECT COUNT(*) as count FROM system_errors WHERE created_at >= ${yesterday.toISOString()}`,
+            sql`SELECT stock_weight FROM products WHERE stock_weight > 0`
         ]);
 
-        const { data: inventoryHealth } = await supabaseAdmin
-            .from('products')
-            .select('stock_weight')
-            .gt('stock_weight', 0);
-
         let lowStockProducts = 0;
-        
-        inventoryHealth?.forEach((p: any) => {
-            if (p.stock_weight <= 500) lowStockProducts++;
+        (lowStockData || []).forEach((p: any) => {
+            if (Number(p.stock_weight) <= 500) lowStockProducts++;
         });
 
-        const errorCount = recentErrors.count || 0;
+        const errorCount = Number(recentErrors?.count || 0);
 
         return {
             metrics: {
-                totalProducts: productsCount.count || 0,
-                totalCustomers: customersCount.count || 0,
-                totalOrders: ordersCount.count || 0,
-                ordersToday: ordersToday.count || 0,
+                totalProducts: Number(productsCount?.count || 0),
+                totalCustomers: Number(customersCount?.count || 0),
+                totalOrders: Number(ordersCount?.count || 0),
+                ordersToday: Number(ordersToday?.count || 0),
             },
             inventory: {
                 lowStockProducts,

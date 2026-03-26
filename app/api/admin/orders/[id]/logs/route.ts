@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 export async function GET(
     request: Request,
@@ -8,15 +8,11 @@ export async function GET(
     try {
         const { id } = await params;
         
-        // In Supabase, order status logs are stored in the order_status_logs table 
-        // linked to the order via order_id.
-        const { data: logs, error } = await supabaseAdmin
-            .from("order_status_logs")
-            .select("*")
-            .eq("order_id", id)
-            .order("created_at", { ascending: false });
-
-        if (error) throw error;
+        const logs = await sql`
+            SELECT * FROM order_status_logs
+            WHERE order_id = ${id}
+            ORDER BY created_at DESC
+        `;
 
         return NextResponse.json(logs || []);
     } catch (error: any) {

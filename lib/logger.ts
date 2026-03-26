@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 // ── Event Types ────────────────────────────────────────────────────────────
 
@@ -28,16 +28,10 @@ export async function logEvent(
   description: string
 ) {
   try {
-    const { error } = await supabaseAdmin
-      .from("system_logs")
-      .insert({
-        event_type: eventType,
-        entity_id: entityId || null,
-        description,
-        created_at: new Date().toISOString(),
-      });
-
-    if (error) throw error;
+    await sql`
+      INSERT INTO system_logs (event_type, entity_id, description, created_at)
+      VALUES (${eventType}, ${entityId || null}, ${description}, NOW())
+    `;
   } catch (err) {
     // Non-blocking: never let logging break the main flow
     console.error("[Logger] Failed to write system log:", err);

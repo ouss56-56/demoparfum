@@ -11,7 +11,7 @@ export default async function PrintInvoicePage({ params }: { params: Promise<{ l
 
     if (!invoiceData) notFound();
 
-    const order = invoiceData.order;
+    const order = invoiceData.order as any;
 
     // Adapt the unified service data to InvoiceView structure
     const unifiedInvoice = {

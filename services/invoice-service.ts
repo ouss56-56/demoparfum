@@ -1,17 +1,25 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 // ── READ ──────────────────────────────────────────────────────────────────
 export const getInvoices = async () => {
-    // Invoices are embedded in the 'orders' table in Supabase (JSONB)
-    const { data, error } = await supabaseAdmin
-        .from('orders')
-        .select('*, customers(*), order_items(*, products(*))')
-        .not('invoice', 'is', null)
-        .order('created_at', { ascending: false });
+    const data = await sql`
+        SELECT 
+            o.*,
+            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
+            (
+                SELECT json_agg(json_build_object(
+                    'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
+                    'volume_id', oi.volume_id, 'volume_data', oi.volume_data,
+                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                ))
+                FROM order_items oi WHERE oi.order_id = o.id
+            ) as order_items
+        FROM orders o
+        WHERE o.invoice IS NOT NULL
+        ORDER BY o.created_at DESC
+    `;
 
-    if (error) throw error;
-
-    return (data || []).map(order => ({
+    return (data || []).map((order: any) => ({
         id: order.invoice?.invoiceNumber || order.id,
         orderId: order.id,
         invoiceNumber: order.invoice?.invoiceNumber,
@@ -25,21 +33,31 @@ export const getInvoices = async () => {
                 ...item,
                 volume: item.volume_data,
                 volumeId: item.volume_data?.id,
-                product: Array.isArray(item.products) ? item.products[0] : item.products
+                product: item.product
             }))
         }
     }));
 };
 
 export const getInvoiceById = async (id: string) => {
-    // Search within orders for the specific invoice number
-    const { data, error } = await supabaseAdmin
-        .from('orders')
-        .select('*, customers(*), order_items(*, products(*))')
-        .eq('invoice->>invoiceNumber', id)
-        .maybeSingle();
+    const [data] = await sql`
+        SELECT 
+            o.*,
+            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
+            (
+                SELECT json_agg(json_build_object(
+                    'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
+                    'volume_data', oi.volume_data,
+                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                ))
+                FROM order_items oi WHERE oi.order_id = o.id
+            ) as order_items
+        FROM orders o
+        WHERE o.invoice->>'invoiceNumber' = ${id}
+        LIMIT 1
+    `;
 
-    if (error || !data) return null;
+    if (!data) return null;
 
     return {
         id: data.invoice?.invoiceNumber || data.id,
@@ -55,20 +73,31 @@ export const getInvoiceById = async (id: string) => {
                 ...item,
                 volume: item.volume_data,
                 volumeId: item.volume_data?.id,
-                product: Array.isArray(item.products) ? item.products[0] : item.products
+                product: item.product
             }))
         }
     };
 };
 
 export const getInvoiceByOrderId = async (orderId: string) => {
-    const { data, error } = await supabaseAdmin
-        .from('orders')
-        .select('*, customers(*), order_items(*, products(*))')
-        .eq('id', orderId)
-        .single();
+    const [data] = await sql`
+        SELECT 
+            o.*,
+            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
+            (
+                SELECT json_agg(json_build_object(
+                    'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
+                    'volume_data', oi.volume_data,
+                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                ))
+                FROM order_items oi WHERE oi.order_id = o.id
+            ) as order_items
+        FROM orders o
+        WHERE o.id = ${orderId}
+        LIMIT 1
+    `;
 
-    if (error || !data || !data.invoice) return null;
+    if (!data || !data.invoice) return null;
 
     return {
         id: data.invoice.invoiceNumber || data.id,
@@ -84,7 +113,7 @@ export const getInvoiceByOrderId = async (orderId: string) => {
                 ...item,
                 volume: item.volume_data,
                 volumeId: item.volume_data?.id,
-                product: Array.isArray(item.products) ? item.products[0] : item.products
+                product: item.product
             }))
         }
     };
@@ -92,7 +121,6 @@ export const getInvoiceByOrderId = async (orderId: string) => {
 
 // ── CREATE ────────────────────────────────────────────────────────────────
 export const createInvoice = async (orderId: string, amount: number) => {
-    // Generate invoice data locally instead of relying on the failing edge function
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -105,14 +133,12 @@ export const createInvoice = async (orderId: string, amount: number) => {
         totalAmount: amount
     };
 
-    const { data: updatedOrder, error } = await supabaseAdmin
-        .from('orders')
-        .update({ invoice: invoiceData })
-        .eq('id', orderId)
-        .select()
-        .single();
+    const [updatedOrder] = await sql`
+        UPDATE orders SET invoice = ${JSON.stringify(invoiceData)}::jsonb
+        WHERE id = ${orderId}
+        RETURNING *
+    `;
 
-    if (error) throw error;
     if (!updatedOrder) throw new Error("Failed to update order with invoice");
 
     return { 

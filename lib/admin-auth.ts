@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { verifyJwtToken } from "./auth";
-import { supabaseAdmin } from "./supabase-admin";
+import { sql } from "@/lib/db";
 
 export interface AdminSession {
     id: string;
@@ -25,14 +25,12 @@ export async function getAdminSession(): Promise<AdminSession | null> {
             return null;
         }
 
-        const { data: admin, error } = await supabaseAdmin
-            .from('admins')
-            .select('id, email, name, role')
-            .eq('id', payload.sub as string)
-            .single();
+        const [admin] = await sql`
+            SELECT id, email, name, role FROM admins WHERE id = ${payload.sub as string} LIMIT 1
+        `;
 
-        if (error || !admin) {
-            console.error("[AdminAuth] Session verification failed: Admin record not found or error occurred.");
+        if (!admin) {
+            console.error("[AdminAuth] Session verification failed: Admin record not found.");
             return null;
         }
 
@@ -50,7 +48,6 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
 /**
  * Ensures an admin session exists, throwing an error if not.
- * Useful for protected API routes.
  */
 export async function requireAdminSession(): Promise<AdminSession> {
     const session = await getAdminSession();

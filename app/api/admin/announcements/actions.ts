@@ -1,21 +1,14 @@
 'use server';
 
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 export async function createAnnouncement(data: { title: string, message: string, link?: string }) {
     try {
-        const { error } = await supabaseAdmin
-            .from('notifications')
-            .insert([{
-                type: 'ANNOUNCEMENT',
-                title: data.title,
-                message: data.message,
-                link: data.link || null,
-                is_read: false // Active
-            }]);
-
-        if (error) throw error;
+        await sql`
+            INSERT INTO notifications (type, title, message, link, is_read)
+            VALUES ('ANNOUNCEMENT', ${data.title}, ${data.message}, ${data.link || null}, false)
+        `;
         
         revalidatePath('/', 'layout');
         return { success: true };
@@ -26,13 +19,7 @@ export async function createAnnouncement(data: { title: string, message: string,
 
 export async function deleteAnnouncement(id: string) {
     try {
-        const { error } = await supabaseAdmin
-            .from('notifications')
-            .delete()
-            .eq('id', id)
-            .eq('type', 'ANNOUNCEMENT');
-
-        if (error) throw error;
+        await sql`DELETE FROM notifications WHERE id = ${id} AND type = 'ANNOUNCEMENT'`;
         
         revalidatePath('/[locale]/admin/(protected)/announcements', 'page');
         return { success: true };
