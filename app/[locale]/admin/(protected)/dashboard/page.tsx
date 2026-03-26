@@ -1,11 +1,25 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
-import { DollarSign, Package, Users, ShoppingCart, Clock, Trophy, AlertTriangle, Bell, Activity } from "lucide-react";
-import { getInventoryHealthScore } from "@/services/intelligence-service";
+import { IntelligenceService } from "@/services/intelligence-service";
+import { AdminService } from "@/services/admin-service";
+import { ProductService } from "@/services/product-service";
+import { CustomerService } from "@/services/customer-service";
+import { OrderService } from "@/services/order-service";
+import { NotificationService } from "@/services/notification-service";
 import SafeImage from "@/components/SafeImage";
 import Link from "next/link";
 import RealtimeReloader from "@/components/admin/RealtimeReloader";
 import ResetProfitButton from "@/components/admin/ResetProfitButton";
 import { getTranslations } from "next-intl/server";
+import { 
+    AlertTriangle, 
+    DollarSign, 
+    Activity, 
+    Trophy, 
+    ShoppingCart, 
+    Clock, 
+    Users, 
+    Package, 
+    Bell 
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -29,26 +43,26 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
 
     try {
         const [
-            { count: pCount },
-            { data: pData },
-            { count: cCount },
-            { data: oData },
-            { count: nCount },
+            pStats,
+            allP,
+            cCount,
+            oData,
+            unreadN,
             healthScore
         ] = await Promise.all([
-            supabaseAdmin.from("products").select("id", { count: 'exact', head: true }),
-            supabaseAdmin.from("products").select("*").limit(500),
-            supabaseAdmin.from("customers").select("id", { count: 'exact', head: true }),
-            supabaseAdmin.from("orders").select("*, customers(shop_name, name)").order("created_at", { ascending: false }).limit(200),
-            supabaseAdmin.from("notifications").select("id", { count: 'exact', head: true }).eq("is_read", false),
-            getInventoryHealthScore(),
+            AdminService.getAdminStats(),
+            ProductService.getProducts({ limit: 500 }),
+            CustomerService.getCustomers(1),
+            OrderService.getOrders(200),
+            NotificationService.getUnreadCount(),
+            IntelligenceService.getInventoryHealthScore(),
         ]);
 
-        productsCount = pCount || 0;
-        productsList = pData || [];
-        customersCount = cCount || 0;
+        productsCount = pStats.totalProducts;
+        productsList = allP || [];
+        customersCount = pStats.totalCustomers;
         allOrders = oData || [];
-        unreadNotifications = nCount || 0;
+        unreadNotifications = unreadN;
         inventoryHealthScore = healthScore;
 
     } catch (err) {

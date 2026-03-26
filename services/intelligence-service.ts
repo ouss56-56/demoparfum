@@ -1,38 +1,33 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 // ── SMART RESTOCK SYSTEM ──────────────────────────────────────────────────
 export const getRestockSuggestions = async () => {
   try {
-    const { data: products, error: pError } = await supabaseAdmin
-        .from('products')
-        .select('*');
-
-    if (pError) {
-        console.error("Failed to fetch products for restock:", pError);
-        return [];
-    }
+    const products = await sql`SELECT * FROM products`;
+    if (!products) return [];
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: recentOrders, error: oError } = await supabaseAdmin
-        .from('orders')
-        .select('order_items(product_id, quantity, volume_data)')
-        .neq('status', 'CANCELLED')
-        .gte('created_at', thirtyDaysAgo.toISOString());
+    const recentOrders = await sql`
+        SELECT 
+            o.id as order_id,
+            oi.product_id,
+            oi.quantity,
+            oi.volume_data
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.status != 'CANCELLED'
+        AND o.created_at >= ${thirtyDaysAgo.toISOString()}
+    `;
 
-    if (oError) {
-        console.error("Failed to fetch orders for restock:", oError);
-        return [];
-    }
+    if (!recentOrders) return [];
 
     const recentDemandMap = new Map<string, number>();
-    recentOrders?.forEach((order: any) => {
-        order.order_items?.forEach((item: any) => {
-            const weight = item.volume_data?.weight || 100;
-            const totalWeight = (item.quantity || 0) * weight;
-            recentDemandMap.set(item.product_id, (recentDemandMap.get(item.product_id) || 0) + totalWeight);
-        });
+    recentOrders.forEach((item: any) => {
+        const weight = (item.volume_data as any)?.weight || 100;
+        const totalWeight = (item.quantity || 0) * weight;
+        recentDemandMap.set(item.product_id, (recentDemandMap.get(item.product_id) || 0) + totalWeight);
     });
 
     return (products || []).map((product: any) => {
@@ -86,31 +81,24 @@ export const getDeadStock = async () => {
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-    const { data: recentOrders, error: oError } = await supabaseAdmin
-        .from('orders')
-        .select('order_items(product_id)')
-        .neq('status', 'CANCELLED')
-        .gte('created_at', sixtyDaysAgo.toISOString());
+    const recentOrders = await sql`
+        SELECT oi.product_id
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.status != 'CANCELLED'
+        AND o.created_at >= ${sixtyDaysAgo.toISOString()}
+    `;
 
-    if (oError) {
-        console.error("Failed to fetch orders for dead stock:", oError);
-        return [];
-    }
+    if (!recentOrders) return [];
 
     const activeProductIds = new Set<string>();
-    recentOrders?.forEach((order: any) => {
-        order.order_items?.forEach((item: any) => activeProductIds.add(item.product_id));
-    });
+    recentOrders.forEach((item: any) => activeProductIds.add(item.product_id));
 
-    const { data: products, error: pError } = await supabaseAdmin
-        .from('products')
-        .select('*')
-        .gt('stock', 0);
+    const products = await sql`
+        SELECT * FROM products WHERE stock > 0
+    `;
 
-    if (pError) {
-        console.error("Failed to fetch products for dead stock:", pError);
-        return [];
-    }
+    if (!products) return [];
     
     const deadProducts = (products || [])
         .filter((p: any) => !activeProductIds.has(p.id));
@@ -141,15 +129,16 @@ export const getProfitAnalytics = async () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: validOrders, error: oError } = await supabaseAdmin
-        .from('orders')
-        .select('*, order_items(*)')
-        .neq('status', 'CANCELLED');
+    const validOrders = await sql`
+        SELECT o.*, 
+            json_agg(oi.*) as order_items
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.status != 'CANCELLED'
+        GROUP BY o.id
+    `;
 
-    if (oError) {
-        console.error("Failed to fetch orders for profit analytics:", oError);
-        return { dailyProfit: [], globalMarginPercent: 0, overallProfit: 0, topProfitableProducts: [] };
-    }
+    if (!validOrders) return { dailyProfit: [], globalMarginPercent: 0, overallProfit: 0, topProfitableProducts: [] };
 
     const dailyMap = new Map<string, { revenue: number, cost: number, profit: number }>();
     for (let i = 29; i >= 0; i--) {
@@ -199,10 +188,9 @@ export const getProfitAnalytics = async () => {
 
     const globalMarginPercent = overallRevenue > 0 ? ((overallRevenue - overallCost) / overallRevenue) * 100 : 0;
 
-    const { data: products, error: pError } = await supabaseAdmin
-        .from('products')
-        .select('id, name, image_url, base_price')
-        .limit(10);
+    const products = await sql`
+        SELECT id, name, image_url, base_price FROM products LIMIT 10
+    `;
 
     const productsProfit = (products || []).map((p: any) => {
         const basePrice = Number(p.base_price || 0);
@@ -232,7 +220,7 @@ export const getProfitAnalytics = async () => {
 // ── INVENTORY HEALTH SCORE ────────────────────────────────────────────────
 export const getInventoryHealthScore = async () => {
     let score = 100;
-    const { data: products } = await supabaseAdmin.from('products').select('stock');
+    const products = await sql`SELECT stock FROM products`;
     if (!products) return 100;
 
     const lowStockCount = products.filter((p: any) => (p.stock || 0) <= 500).length;
@@ -289,4 +277,13 @@ export const getIntelligenceStats = async () => {
             }
         }
     };
+};
+
+export const IntelligenceService = {
+    getRestockSuggestions,
+    getDeadStock,
+    getProfitAnalytics,
+    getInventoryHealthScore,
+    getSmartAlerts,
+    getIntelligenceStats
 };

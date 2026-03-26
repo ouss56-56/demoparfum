@@ -84,3 +84,14 @@ export const notifyNewCustomer = async (customerId: string, shopName: string) =>
         { customerId }
     );
 };
+
+export const NotificationService = {
+    createNotification,
+    getNotifications,
+    getUnreadCount,
+    markAsRead,
+    markAllAsRead,
+    notifyNewOrder,
+    notifyLowStock,
+    notifyNewCustomer
+};

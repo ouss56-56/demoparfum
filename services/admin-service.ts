@@ -1,4 +1,3 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
@@ -16,15 +15,8 @@ export const createAdminUser = async (data: {
     password: string;
     name?: string;
 }) => {
-    // 1. Create user in Supabase Auth
-    // Note: This requires the admin to have 'service_role' or proper permissions to create users.
-    // However, since we are separating from Firebase Auth entirely, we will use our own 'admins' table
-    // for now to match the existing logic, or use Supabase Auth's 'auth.users'.
-    // Given the separation request, we'll store them in our public.admins table.
-    
     const hashedPassword = await bcrypt.hash(data.password, 10);
     
-    // For now, we'll use a custom 'admins' table.
     const [admin] = await sql`
         INSERT INTO admins (email, password_hash, name, role)
         VALUES (${data.email}, ${hashedPassword}, ${data.name ?? null}, 'SUPER_ADMIN')
@@ -68,24 +60,15 @@ export const getAdminStats = async () => {
 };
 
 export const validateAdminCredentials = async (email: string, password: string) => {
-    console.log(`[validateAdminCredentials] Checking email: ${email}`);
     const [admin] = await sql`
         SELECT * FROM admins WHERE email = ${email} LIMIT 1
     `;
     
-    if (!admin) {
-        console.log(`[validateAdminCredentials] Admin not found for email: ${email}`);
-        return null;
-    }
+    if (!admin) return null;
     
-    console.log(`[validateAdminCredentials] Admin found, verifying password hash...`);
     const isValid = await bcrypt.compare(password, admin.password_hash);
-    if (!isValid) {
-        console.log(`[validateAdminCredentials] Invalid password for: ${email}`);
-        return null;
-    }
+    if (!isValid) return null;
 
-    console.log(`[validateAdminCredentials] Password valid for: ${email}`);
     return { 
         id: admin.id, 
         email: admin.email,
@@ -93,4 +76,10 @@ export const validateAdminCredentials = async (email: string, password: string) 
         role: admin.role,
         createdAt: new Date(admin.created_at)
     };
+};
+
+export const AdminService = {
+    createAdminUser,
+    getAdminStats,
+    validateAdminCredentials
 };

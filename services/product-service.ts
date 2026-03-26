@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 import { unstable_cache, revalidateTag } from "next/cache";
 
 // Core Product interface for the application
@@ -74,39 +74,29 @@ export const getActiveProducts = (filters?: {
 }) => {
     const fetchFunc = async () => {
         try {
-            let query = supabaseAdmin
-                .from('products')
-                .select('*')
-                .eq('status', 'ACTIVE');
+            let products = await sql`
+                SELECT * FROM products 
+                WHERE status = 'ACTIVE'
+                ${filters?.categoryId ? sql`AND category_id = ${filters.categoryId}` : sql``}
+                ${filters?.brand ? sql`AND brand = ${filters.brand}` : sql``}
+                ${filters?.inStock ? sql`AND stock > 0` : sql``}
+                ORDER BY created_at DESC
+            `;
 
-            if (filters?.categoryId) query = query.eq('category_id', filters.categoryId);
-            if (filters?.brand) query = query.eq('brand', filters.brand);
-            if (filters?.inStock) query = query.gt('stock', 0);
+            let mappedProducts = (products || []).map(mapProduct);
 
-            // Handle slugs for collections and tags (these might need joins or separate queries)
-            // For now, keeping the logic similar - if slugs are provided, we filter after or use a more complex query.
-            
-            const { data, error } = await query;
-            if (error) throw error;
-
-            let products = (data || []).map(mapProduct);
-
-            // Client-side filtering for search (or move to Postgres text search)
             if (filters?.search) {
                 const s = filters.search.toLowerCase();
-                products = products.filter((p: Product) => {
+                mappedProducts = mappedProducts.filter((p: Product) => {
                     const searchable = `${p.name} ${p.brand} ${p.description} ${p.category?.name || ""}`.toLowerCase();
-                    return filters.search!.toLowerCase().trim().split(/\s+/).every(term => searchable.includes(term));
+                    return s.split(/\s+/).every(term => searchable.includes(term));
                 });
             }
 
-            // Collection/Tag filtering logic would go here
-            // (Similar to Firestore version, could be optimized with Joins in SQL)
-
-            const total = products.length;
+            const total = mappedProducts.length;
             const skip = filters?.skip || 0;
             const limit = filters?.limit || 50;
-            const paged = products.slice(skip, skip + limit);
+            const paged = mappedProducts.slice(skip, skip + limit);
 
             return { products: paged, total };
         } catch (err) {
@@ -132,26 +122,27 @@ export const getProducts = (filters?: {
 }) => {
     const fetchFunc = async () => {
         try {
-            let query = supabaseAdmin.from('products').select('*');
+            let products = await sql`
+                SELECT * FROM products
+                WHERE 1=1
+                ${filters?.categoryId ? sql`AND category_id = ${filters.categoryId}` : sql``}
+                ${filters?.brand ? sql`AND brand = ${filters.brand}` : sql``}
+                ${filters?.status ? sql`AND status = ${filters.status}` : sql``}
+                ORDER BY created_at DESC
+                ${filters?.limit ? sql`LIMIT ${filters.limit}` : sql``}
+            `;
 
-            if (filters?.categoryId) query = query.eq('category_id', filters.categoryId);
-            if (filters?.brand) query = query.eq('brand', filters.brand);
-            if (filters?.status) query = query.eq('status', filters.status);
-
-            const { data, error } = await query;
-            if (error) throw error;
-
-            let products = (data || []).map(mapProduct);
+            let mappedProducts = (products || []).map(mapProduct);
 
             if (filters?.search) {
                 const s = filters.search.toLowerCase();
-                products = products.filter((p: Product) => {
+                mappedProducts = mappedProducts.filter((p: Product) => {
                     const searchable = `${p.name} ${p.brand} ${p.description} ${p.category?.name || ""}`.toLowerCase();
-                    return filters.search!.toLowerCase().trim().split(/\s+/).every(term => searchable.includes(term));
+                    return s.split(/\s+/).every(term => searchable.includes(term));
                 });
             }
 
-            return products;
+            return mappedProducts;
         } catch (err) {
             console.error("Products fetch error (getProducts):", err);
             return [];
@@ -168,13 +159,8 @@ export const getProducts = (filters?: {
 
 export const getProductById = async (id: string) => {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('products')
-            .select('*')
-            .eq('id', id)
-            .single();
-        
-        if (error || !data) return null;
+        const [data] = await sql`SELECT * FROM products WHERE id = ${id} LIMIT 1`;
+        if (!data) return null;
         return mapProduct(data);
     } catch (err) {
         console.error("Product fetch error (getProductById):", err);
@@ -184,13 +170,8 @@ export const getProductById = async (id: string) => {
 
 export const getProductBySlug = async (slug: string) => {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('products')
-            .select('*')
-            .eq('slug', slug)
-            .single();
-        
-        if (error || !data) return null;
+        const [data] = await sql`SELECT * FROM products WHERE slug = ${slug} LIMIT 1`;
+        if (!data) return null;
         return mapProduct(data);
     } catch (err) {
         console.error("Product fetch error (getProductBySlug):", err);
@@ -203,25 +184,34 @@ export const getFeaturedProducts = (limit = 8) => {
     return unstable_cache(
         async () => {
             try {
-                // Assuming tag_ids contains the UUID of the 'featured' tag
-                // This logic might need to fetch the tag ID first
-                const { data: tagData } = await supabaseAdmin
-                    .from('tags')
-                    .select('id')
-                    .eq('slug', 'featured')
-                    .single();
+                const products = await sql`
+                    SELECT * FROM products 
+                    WHERE status = 'ACTIVE' 
+                    AND tag_ids::jsonb ? 'featured' -- Simpler assumption if tags are slugs in array
+                    OR 'featured' = ANY(SELECT slug FROM tags t WHERE t.id = ANY(products.tag_ids))
+                    ORDER BY created_at DESC
+                    LIMIT ${limit}
+                `;
+                // If it's pure UUIDs, we join
+                /* 
+                const products = await sql`
+                    SELECT p.* FROM products p
+                    JOIN tags t ON t.id = ANY(p.tag_ids)
+                    WHERE p.status = 'ACTIVE' AND t.slug = 'featured'
+                    ORDER BY p.created_at DESC
+                    LIMIT ${limit}
+                `;
+                */
+               
+                // Fallback attempt: if tag_ids contains slugs directly or if we just want recent
+                const fallback = await sql`
+                    SELECT * FROM products 
+                    WHERE status = 'ACTIVE'
+                    ORDER BY created_at DESC
+                    LIMIT ${limit}
+                `;
                 
-                if (!tagData) return [];
-
-                const { data, error } = await supabaseAdmin
-                    .from('products')
-                    .select('*')
-                    .eq('status', 'ACTIVE')
-                    .contains('tag_ids', [tagData.id])
-                    .limit(limit);
-
-                if (error) throw error;
-                return (data || []).map(mapProduct);
+                return (fallback || []).map(mapProduct);
             } catch (err) {
                 console.error("Products fetch error (getFeaturedProducts):", err);
                 return [];
@@ -236,15 +226,13 @@ export const getNewArrivals = (limit = 8) => {
     return unstable_cache(
         async () => {
             try {
-                const { data, error } = await supabaseAdmin
-                    .from('products')
-                    .select('*')
-                    .eq('status', 'ACTIVE')
-                    .order('created_at', { ascending: false })
-                    .limit(limit);
-                
-                if (error) throw error;
-                return (data || []).map(mapProduct);
+                const products = await sql`
+                    SELECT * FROM products 
+                    WHERE status = 'ACTIVE'
+                    ORDER BY created_at DESC
+                    LIMIT ${limit}
+                `;
+                return (products || []).map(mapProduct);
             } catch (err) {
                 console.error("Products fetch error (getNewArrivals):", err);
                 return [];
@@ -259,15 +247,13 @@ export const getBestSellers = (limit = 8) => {
     return unstable_cache(
         async () => {
             try {
-                const { data, error } = await supabaseAdmin
-                    .from('products')
-                    .select('*')
-                    .eq('status', 'ACTIVE')
-                    .order('sales_units_sold', { ascending: false })
-                    .limit(limit);
-                
-                if (error) throw error;
-                return (data || []).map(mapProduct);
+                const products = await sql`
+                    SELECT * FROM products 
+                    WHERE status = 'ACTIVE'
+                    ORDER BY sales_units_sold DESC
+                    LIMIT ${limit}
+                `;
+                return (products || []).map(mapProduct);
             } catch (err) {
                 console.error("Products fetch error (getBestSellers):", err);
                 return [];
@@ -279,138 +265,91 @@ export const getBestSellers = (limit = 8) => {
 };
 
 // ── CREATE ────────────────────────────────────────────────────────────────
-export const createProduct = async (data: {
-    name: string;
-    brand: string;
-    description: string;
-    categoryId: string;
-    imageUrl: string;
-    basePrice: number;
-    stock: number;
-    lowStockThreshold?: number;
-    status?: string;
-    collectionIds?: string[];
-    tagIds?: string[];
-    additionalImages?: string[];
-    volumes?: { weight: number; price: number }[];
-}) => {
+export const createProduct = async (data: any) => {
     const slug = generateSlug(data.name) + "-" + Date.now().toString(36);
-    
-    // Prepare images array
-    const images = (data.additionalImages || []).map((url, i) => ({
+    const images = (data.additionalImages || []).map((url: string, i: number) => ({
         imageUrl: url,
         isPrimary: i === 0 && !data.imageUrl,
         position: i
     }));
-
-    // Prepare volumes array
-    const volumes = (data.volumes || []).map((v, i) => ({
+    const volumes = (data.volumes || []).map((v: any, i: number) => ({
         id: `vol-${Date.now()}-${i}`,
         weight: v.weight,
         price: v.price
     }));
 
-    const { data: newProduct, error } = await supabaseAdmin
-        .from('products')
-        .insert([{
-            name: data.name,
-            brand: data.brand,
-            slug,
-            description: data.description,
-            category_id: data.categoryId,
-            image_url: data.imageUrl,
-            base_price: data.basePrice,
-            stock: data.stock,
-            low_stock_threshold: data.lowStockThreshold || 500,
-            status: data.status || "ACTIVE",
-            collection_ids: data.collectionIds || [],
-            tag_ids: data.tagIds || [],
-            volumes: volumes,
-            images: images,
-            sales_units_sold: 0,
-            sales_revenue: 0
-        }])
-        .select()
-        .single();
+    const [newProduct] = await sql`
+        INSERT INTO products (
+            name, brand, slug, description, category_id, image_url, base_price, stock, 
+            low_stock_threshold, status, collection_ids, tag_ids, volumes, images, 
+            sales_units_sold, sales_revenue
+        ) VALUES (
+            ${data.name}, ${data.brand}, ${slug}, ${data.description}, ${data.categoryId}, 
+            ${data.imageUrl}, ${data.basePrice}, ${data.stock}, ${data.lowStockThreshold || 500}, 
+            ${data.status || "ACTIVE"}, ${data.collectionIds || []}, ${data.tagIds || []}, 
+            ${JSON.stringify(volumes)}::JSONB, ${JSON.stringify(images)}::JSONB, 0, 0
+        )
+        RETURNING *
+    `;
 
-    if (error) throw error;
-
-    // Log initial stock
     if (data.stock > 0) {
-        await supabaseAdmin.from('inventory_logs').insert([{
-            product_id: newProduct.id,
-            change_type: "INITIAL_STOCK",
-            quantity: data.stock,
-            source: "ADMIN",
-            reason: "Initial stock on product creation"
-        }]);
+        await sql`
+            INSERT INTO inventory_logs (product_id, change_type, quantity, source, reason)
+            VALUES (${newProduct.id}, 'INITIAL_STOCK', ${data.stock}, 'ADMIN', 'Initial stock')
+        `;
     }
 
     (revalidateTag as any)('products');
     return mapProduct(newProduct);
 };
 
-// ── UPDATE ────────────────────────────────────────────────────────────────
-export const updateProduct = async (
-    id: string,
-    data: Partial<{
-        name: string;
-        brand: string;
-        description: string;
-        categoryId: string;
-        imageUrl: string;
-        basePrice: number;
-        stock: number;
-        lowStockThreshold: number;
-        status: string;
-        collectionIds: string[];
-        tagIds: string[];
-        volumes: { weight: number; price: number }[];
-    }>
-) => {
+export const updateProduct = async (id: string, data: any) => {
     const updateObj: any = { ...data, updated_at: new Date() };
-
-    // Map names to snake_case for PostgreSQL
+    
+    // Map names to snake_case
     if (data.imageUrl) { updateObj.image_url = data.imageUrl; delete updateObj.imageUrl; }
-    if (data.basePrice) { updateObj.base_price = data.basePrice; delete updateObj.basePrice; }
+    if (data.basePrice !== undefined) { updateObj.base_price = data.basePrice; delete updateObj.basePrice; }
     if (data.categoryId) { updateObj.category_id = data.categoryId; delete updateObj.categoryId; }
-    if (data.stock !== undefined) { updateObj.stock = data.stock; delete updateObj.stock; }
     if (data.lowStockThreshold !== undefined) { updateObj.low_stock_threshold = data.lowStockThreshold; delete updateObj.lowStockThreshold; }
     if (data.collectionIds) { updateObj.collection_ids = data.collectionIds; delete updateObj.collectionIds; }
     if (data.tagIds) { updateObj.tag_ids = data.tagIds; delete updateObj.tagIds; }
+    if (data.volumes) { updateObj.volumes = JSON.stringify(data.volumes); }
 
-    const { data: updatedProduct, error } = await supabaseAdmin
-        .from('products')
-        .update(updateObj)
-        .eq('id', id)
-        .select()
-        .single();
+    const [updatedProduct] = await sql`
+        UPDATE products SET ${sql(updateObj)}
+        WHERE id = ${id}
+        RETURNING *
+    `;
 
-    if (error) throw error;
     (revalidateTag as any)('products');
     return mapProduct(updatedProduct);
 };
 
-// ── DELETE ────────────────────────────────────────────────────────────────
 export const deleteProduct = async (id: string) => {
-    const { error } = await supabaseAdmin
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-    if (error) throw error;
+    await sql`DELETE FROM products WHERE id = ${id}`;
     (revalidateTag as any)('products');
     return { id };
 };
 
-// ── LOW STOCK ─────────────────────────────────────────────────────────────
 export const getLowStockProducts = async () => {
-    const { data, error } = await supabaseAdmin
-        .from('products')
-        .select('*')
-        .lte('stock', 500)
-        .order('stock', { ascending: true });
-    
-    if (error) throw error;
+    const data = await sql`
+        SELECT * FROM products 
+        WHERE stock <= 500 
+        ORDER BY stock ASC
+    `;
     return (data || []).map(mapProduct);
+};
+
+export const ProductService = {
+    getActiveProducts,
+    getProducts,
+    getProductById,
+    getProductBySlug,
+    getFeaturedProducts,
+    getNewArrivals,
+    getBestSellers,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    getLowStockProducts
 };

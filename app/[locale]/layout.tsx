@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter, Noto_Sans_Arabic } from "next/font/google";
+import { Playfair_Display, Outfit, Noto_Sans_Arabic } from "next/font/google";
 import "../globals.css";
 import Navbar from "@/components/Navbar";
 import { getCustomerSession } from "@/lib/customer-auth";
@@ -15,7 +15,7 @@ const playfair = Playfair_Display({
     variable: "--font-serif",
 });
 
-const inter = Inter({
+const outfit = Outfit({
     subsets: ["latin"],
     variable: "--font-sans",
 });
@@ -60,7 +60,7 @@ export default async function RootLayout(props: {
     return (
         <html lang={locale} dir={direction}>
             <body
-                className={`${playfair.variable} ${inter.variable} ${notoArabic.variable} ${locale === 'ar' ? 'font-arabic' : 'font-sans'} antialiased flex flex-col min-h-screen`}
+                className={`${playfair.variable} ${outfit.variable} ${notoArabic.variable} ${locale === 'ar' ? 'font-arabic' : 'font-sans'} antialiased flex flex-col min-h-screen`}
             >
                 <NextIntlClientProvider messages={messages}>
                     <CartProvider>

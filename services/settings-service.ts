@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sql } from "@/lib/db";
 
 export interface SiteSettings {
     id: string;
@@ -12,17 +12,12 @@ export interface SiteSettings {
 
 export async function getSiteSettings(): Promise<SiteSettings> {
     try {
-        const { data, error } = await supabaseAdmin
-            .from("site_settings")
-            .select("*")
-            .single();
+        const [data] = await sql`SELECT * FROM site_settings LIMIT 1`;
 
-        if (error) {
-            console.error("Error fetching site settings:", error);
-            // Return defaults if table is empty or missing
+        if (!data) {
             return {
-                id: "",
-                whatsapp_number: "+213542303496",
+                id: "00000000-0000-0000-0000-000000000000",
+                whatsapp_number: "+213555000000",
                 facebook_page: "demo_perfume",
                 contact_email: "contact@demo-perfume.com",
                 store_address: "Algeria, Setif",
@@ -31,12 +26,12 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             };
         }
 
-        return data;
+        return data as SiteSettings;
     } catch (e) {
         console.error("getSiteSettings crash:", e);
         return {
             id: "",
-            whatsapp_number: "+213542303496",
+            whatsapp_number: "+213555000000",
             facebook_page: "demo_perfume",
             contact_email: "contact@demo-perfume.com",
             store_address: "Algeria, Setif",
@@ -48,15 +43,15 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 
 export async function updateSiteSettings(settings: Partial<SiteSettings>) {
     try {
-        const { error } = await supabaseAdmin
-            .from("site_settings")
-            .update({
-                ...settings,
-                updated_at: new Date().toISOString()
-            })
-            .eq("id", settings.id || "00000000-0000-0000-0000-000000000000"); // Usually we only have one row
+        const updateObj: any = { ...settings };
+        updateObj.updated_at = new Date().toISOString();
+        delete updateObj.id;
 
-        if (error) throw error;
+        await sql`
+            UPDATE site_settings SET ${sql(updateObj)}
+            WHERE id = (SELECT id FROM site_settings LIMIT 1)
+        `;
+
         return { success: true };
     } catch (error: any) {
         console.error("updateSiteSettings error:", error);

@@ -1,4 +1,3 @@
-import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sql } from "@/lib/db";
 import { notifyNewOrder, notifyLowStock } from "./notification-service";
 import { Errors } from "@/lib/errors";
@@ -265,13 +264,10 @@ export const countOrdersByCustomer = (customerId: string): Promise<number> => {
     return unstable_cache(
         async () => {
             try {
-                const { count, error } = await supabaseAdmin
-                    .from('orders')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('customer_id', customerId);
-                
-                if (error) throw error;
-                return count || 0;
+                const [result] = await sql`
+                    SELECT COUNT(*) as count FROM orders WHERE customer_id = ${customerId}
+                `;
+                return Number(result.count) || 0;
             } catch (err) {
                 console.error("Order fetch error (countOrdersByCustomer):", err);
                 return 0;
@@ -286,14 +282,28 @@ export const getOrdersByCustomer = (customerId: string, limit = 50, skip = 0): P
     return unstable_cache(
         async () => {
             try {
-                const { data, error } = await supabaseAdmin
-                    .from('orders')
-                    .select('*, order_items(*, products(*))')
-                    .eq('customer_id', customerId)
-                    .order('created_at', { ascending: false })
-                    .range(skip, skip + limit - 1);
+                const data = await sql`
+                    SELECT 
+                        o.*,
+                        (
+                            SELECT json_agg(json_build_object(
+                                'id', oi.id,
+                                'product_id', oi.product_id,
+                                'quantity', oi.quantity,
+                                'price', oi.price,
+                                'volume_id', oi.volume_id,
+                                'volume_data', oi.volume_data,
+                                'products', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                            ))
+                            FROM order_items oi WHERE oi.order_id = o.id
+                        ) as order_items,
+                        (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers
+                    FROM orders o
+                    WHERE o.customer_id = ${customerId}
+                    ORDER BY o.created_at DESC
+                    LIMIT ${limit} OFFSET ${skip}
+                `;
 
-                if (error) throw error;
                 return (data || []).map(mapOrder);
             } catch (err) {
                 console.error("Order fetch error (getOrdersByCustomer):", err);
@@ -409,4 +419,15 @@ export const getReorderItems = async (orderId: string): Promise<any[]> => {
         volumeId: item.volume_id,
         name: item.product_name || "Product",
     }));
+};
+
+export const OrderService = {
+    createOrder,
+    getOrders,
+    getOrderById,
+    countOrdersByCustomer,
+    getOrdersByCustomer,
+    updateOrderStatus,
+    updateOrderShipping,
+    getReorderItems
 };

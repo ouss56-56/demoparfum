@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS customers (
     phone TEXT UNIQUE NOT NULL,
     shop_name TEXT,
     wilaya TEXT,
+    wilaya_id INTEGER,
+    commune TEXT,
     address TEXT,
     role TEXT DEFAULT 'TRADER',
     password_hash TEXT,
