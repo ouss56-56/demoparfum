@@ -56,7 +56,11 @@ export const getCollectionBySlug = async (slug: string) => {
             }
         }));
 
-        return { ...collection, products: mappedProducts };
+        return { 
+            id: collection.id,
+            ...collection, 
+            products: mappedProducts 
+        };
     } catch (err) {
         console.error("Collection fetch error (getCollectionBySlug):", err);
         return null;

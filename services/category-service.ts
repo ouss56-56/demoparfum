@@ -62,6 +62,7 @@ export const getCategoryById = async (id: string) => {
             ...category, 
             createdAt: new Date(category.created_at),
             products: (products || []).map(p => ({
+                id: p.id,
                 ...p,
                 createdAt: new Date(p.created_at),
                 category: { id: category.id, name: category.name }
@@ -85,9 +86,11 @@ export const getCategoryBySlug = async (slug: string) => {
         `;
 
         return { 
+            id: category.id,
             ...category, 
             createdAt: new Date(category.created_at),
             products: (products || []).map(p => ({
+                id: p.id,
                 ...p,
                 createdAt: new Date(p.created_at),
                 category: { id: category.id, name: category.name }
