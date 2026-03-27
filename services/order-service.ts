@@ -357,6 +357,9 @@ export const updateOrderStatus = async (orderId: string, status: string, changed
     const [order] = await sql`SELECT * FROM orders WHERE id = ${orderId}`;
     if (!order) throw new Error("Order not found");
     
+    // Check if we are transitioning to CANCELLED from a non-cancelled state
+    const isCancelling = status === "CANCELLED" && order.status !== "CANCELLED";
+    
     const logs = order.logs || [];
     logs.push({
         status,
@@ -365,49 +368,56 @@ export const updateOrderStatus = async (orderId: string, status: string, changed
         createdAt: new Date().toISOString(),
     });
 
-    const updateData: any = { status, logs };
+    const updateData: any = { 
+        status, 
+        logs: JSON.stringify(logs),
+        updated_at: new Date()
+    };
 
     // STOCK RETURN ON CANCELLATION
-    if (status === "CANCELLED" && order.status !== "CANCELLED") {
+    if (isCancelling) {
         try {
             const items = await sql`SELECT * FROM order_items WHERE order_id = ${orderId}`;
             if (items && items.length > 0) {
                 for (const item of items) {
                     try {
-                        const weight = item.volume_data?.weight || parseInt((item.volume_id || "").replace(/\D/g, "")) || 0;
-                        const totalReturn = weight * (item.quantity || 1);
+                        const weight = Number(item.volume_data?.weight || 0);
+                        const totalReturn = weight * Number(item.quantity || 1);
+                        
                         if (totalReturn > 0) {
-                            // Fetch current stock
-                            const [p] = await sql`SELECT stock FROM products WHERE id = ${item.product_id}`;
-                            if (p) {
-                                await sql`UPDATE products SET stock = ${Number(p.stock || 0) + totalReturn} WHERE id = ${item.product_id}`;
-                            }
+                            await sql`
+                                UPDATE products 
+                                SET stock = stock + ${totalReturn},
+                                    updated_at = NOW()
+                                WHERE id = ${item.product_id}
+                            `;
+                            
+                            // Log inventory adjustment
+                            await sql`
+                                INSERT INTO inventory_logs (product_id, change_type, quantity, source, reason)
+                                VALUES (${item.product_id}, 'RESTOCK', ${totalReturn}, 'SYSTEM', ${`Order #${orderId.slice(0,8)} Cancelled`})
+                            `;
                         }
                     } catch (itemErr) {
-                        console.error(`Failed to return stock for item ${item.id}`, itemErr);
+                        console.error(`[OrderService] Failed to return stock for item ${item.id}`, itemErr);
                     }
                 }
             }
         } catch (err) {
-            console.error("Failed to process stock return on cancel", err);
+            console.error("[OrderService] Failed to process stock return on cancel", err);
         }
     }
 
-    // AUTOMATION: If status is SHIPPED or DELIVERED, update payment if not yet paid, and generate invoice
+    // AUTOMATION: If status is SHIPPED or DELIVERED
     if (status === OrderStatus.SHIPPED || status === OrderStatus.DELIVERED) {
         if (!order.payment_status || order.payment_status === "UNPAID") {
             updateData.payment_status = "SHIPPED_UNPAID";
         }
         
-        // Trigger invoice generation asynchronously
-        import("@/services/invoice-service").then(m => m.createInvoice(orderId, Number(order.total_price))).catch(err => {
-            console.error("Auto-invoice generation failed:", err);
-            import("@/services/audit-service").then(m => m.logSystemError({
-                message: `Auto-invoice failed for order ${orderId}: ${err.message}`,
-                path: "order-service.updateOrderStatus",
-                method: "AUTO"
-            }));
-        });
+        // Trigger invoice generation
+        import("@/services/invoice-service")
+            .then(m => m.createInvoice(orderId, Number(order.total_price)))
+            .catch(err => console.error("[OrderService] Auto-invoice failed:", err));
     }
 
     const [updatedOrder] = await sql`
@@ -418,13 +428,24 @@ export const updateOrderStatus = async (orderId: string, status: string, changed
 
     if (!updatedOrder) throw new Error("Order update failed");
 
-    // Fetch details for mapOrder
-    const finalOrder = await getOrderById(orderId);
-    if (!finalOrder) throw new Error("Order update returned no data");
-
+    // Revalidate caches
     (revalidateTag as any)("orders");
     (revalidateTag as any)(`orders:${order.customer_id}`);
-    return finalOrder;
+
+    // Notify Trader of status change
+    try {
+        const { createNotification } = await import("./notification-service");
+        await createNotification(
+            "ORDER_STATUS",
+            `Order ${status}`,
+            `Your order #${orderId.slice(0,8)} is now ${status.toLowerCase()}.`,
+            { orderId, userId: order.customer_id }
+        );
+    } catch (notifyErr) {
+        console.error("[OrderService] Status notification failed:", notifyErr);
+    }
+
+    return await getOrderById(orderId);
 };
 
 export const updateOrderShipping = async (orderId: string, data: {

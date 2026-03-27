@@ -7,9 +7,10 @@ export const createNotification = async (
     message: string,
     metadata?: Record<string, any>
 ) => {
+    const userId = metadata?.userId || null;
     const [notification] = await sql`
-        INSERT INTO notifications (type, title, message, metadata, is_read)
-        VALUES (${type}, ${title}, ${message}, ${metadata ? JSON.stringify(metadata) : null}::JSONB, false)
+        INSERT INTO notifications (type, title, message, metadata, is_read, user_id)
+        VALUES (${type}, ${title}, ${message}, ${metadata ? JSON.stringify(metadata) : null}::JSONB, false, ${userId})
         RETURNING *
     `;
 
@@ -17,12 +18,10 @@ export const createNotification = async (
 };
 
 // ── GET ALL NOTIFICATIONS ────────────────────────────────────────────────
-export const getNotifications = async (limit = 30) => {
-    const data = await sql`
-        SELECT * FROM notifications
-        ORDER BY created_at DESC
-        LIMIT ${limit}
-    `;
+export const getNotifications = async (userId: string | null = null, limit = 30) => {
+    const data = userId 
+        ? await sql`SELECT * FROM notifications WHERE user_id = ${userId} OR user_id IS NULL ORDER BY created_at DESC LIMIT ${limit}`
+        : await sql`SELECT * FROM notifications WHERE user_id IS NULL ORDER BY created_at DESC LIMIT ${limit}`;
 
     return (data || []).map(n => ({
         id: n.id,
@@ -33,11 +32,11 @@ export const getNotifications = async (limit = 30) => {
 };
 
 // ── GET UNREAD COUNT ─────────────────────────────────────────────────────
-export const getUnreadCount = async () => {
+export const getUnreadCount = async (userId: string | null = null) => {
     try {
-        const [result] = await sql`
-            SELECT COUNT(*) as count FROM notifications WHERE is_read = false
-        `;
+        const [result] = userId
+            ? await sql`SELECT COUNT(*) as count FROM notifications WHERE is_read = false AND (user_id = ${userId} OR user_id IS NULL)`
+            : await sql`SELECT COUNT(*) as count FROM notifications WHERE is_read = false AND user_id IS NULL`;
         return Number(result.count) || 0;
     } catch (e) {
         console.error("Notification getUnreadCount error:", e);

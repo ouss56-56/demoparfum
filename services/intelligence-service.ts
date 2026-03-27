@@ -95,7 +95,7 @@ export const getDeadStock = async () => {
     recentOrders.forEach((item: any) => activeProductIds.add(item.product_id));
 
     const products = await sql`
-        SELECT * FROM products WHERE stock_weight > 0 OR stock > 0
+        SELECT * FROM products WHERE stock > 0
     `;
 
     if (!products) return [];
@@ -220,16 +220,16 @@ export const getProfitAnalytics = async () => {
 // ── INVENTORY HEALTH SCORE ────────────────────────────────────────────────
 export const getInventoryHealthScore = async () => {
     let score = 100;
-    const products = await sql`SELECT stock, stock_weight FROM products`.catch(() => []);
+    const products = await sql`SELECT stock FROM products`.catch(() => []);
     if (!products || products.length === 0) return 100;
 
-    const lowStockCount = products.filter((p: any) => Number(p.stock ?? p.stock_weight ?? 0) <= 500).length;
+    const lowStockCount = products.filter((p: any) => Number(p.stock || 0) <= 500).length;
     score -= (lowStockCount * 2); 
 
     const deadStock = await getDeadStock();
     score -= (deadStock.length * 5); 
 
-    const oosCount = products.filter((p: any) => (p.stock_weight || 0) === 0).length;
+    const oosCount = products.filter((p: any) => Number(p.stock || 0) === 0).length;
     score -= (oosCount * 5); 
 
     return Math.max(0, score);

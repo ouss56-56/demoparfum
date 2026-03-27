@@ -5,8 +5,8 @@ import { Bell, X, Megaphone } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLocale } from 'next-intl';
 
-export default function NotificationBell({ isHeroPage }: { isHeroPage: boolean }) {
-    const [announcements, setAnnouncements] = useState<any[]>([]);
+export default function NotificationBell({ isHeroPage, userId }: { isHeroPage?: boolean, userId?: string }) {
+    const [notifications, setNotifications] = useState<any[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -14,36 +14,51 @@ export default function NotificationBell({ isHeroPage }: { isHeroPage: boolean }
     const isRtl = locale === 'ar';
 
     useEffect(() => {
-        const fetchAnnouncements = async () => {
-            const { data } = await supabase
+        const fetchNotifications = async () => {
+            let query = supabase
                 .from("notifications")
                 .select("*")
-                .eq("type", "ANNOUNCEMENT")
                 .order("created_at", { ascending: false })
                 .limit(10);
+            
+            if (userId) {
+                // Fetch announcements OR notifications for this user
+                query = query.or(`type.eq.ANNOUNCEMENT,user_id.eq.${userId}`);
+            } else {
+                query = query.eq("type", "ANNOUNCEMENT");
+            }
 
-            if (data && data.length > 0) {
-                setAnnouncements(data);
-                // Simple way to handle "unread": checking if user has seen these specific IDs
-                const seenIds = JSON.parse(localStorage.getItem('seenAnnouncements') || '[]');
+            const { data } = await query;
+
+            if (data) {
+                setNotifications(data);
+                const seenIds = JSON.parse(localStorage.getItem('seenNotifications') || '[]');
                 const newUnread = data.some(a => !seenIds.includes(a.id));
                 setHasUnread(newUnread);
             }
         };
 
-        fetchAnnouncements();
+        fetchNotifications();
 
+        // Subscribe to relevant notifications
         const channel = supabase
-            .channel('public:notifications')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: "type=eq.ANNOUNCEMENT" }, payload => {
-                fetchAnnouncements();
+            .channel('notifications-realtime')
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'notifications'
+            }, payload => {
+                const newNotif = payload.new;
+                if (newNotif.type === "ANNOUNCEMENT" || (userId && newNotif.user_id === userId)) {
+                    fetchNotifications();
+                }
             })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [supabase]);
+    }, [userId]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -58,8 +73,8 @@ export default function NotificationBell({ isHeroPage }: { isHeroPage: boolean }
     const toggleOpen = () => {
         if (!isOpen && hasUnread) {
             // Mark as read in local storage
-            const ids = announcements.map(a => a.id);
-            localStorage.setItem('seenAnnouncements', JSON.stringify(ids));
+            const ids = notifications.map(n => n.id);
+            localStorage.setItem('seenNotifications', JSON.stringify(ids));
             setHasUnread(false);
         }
         setIsOpen(!isOpen);
@@ -93,23 +108,26 @@ export default function NotificationBell({ isHeroPage }: { isHeroPage: boolean }
                     </div>
 
                     <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                        {announcements.length === 0 ? (
+                        {notifications.length === 0 ? (
                             <div className="py-8 text-center">
                                 <Megaphone className="w-8 h-8 text-gray-200 mx-auto mb-3" />
-                                <p className="text-sm text-gray-400 font-medium">{isRtl ? 'لا توجد إعلانات حالياً' : 'No announcements yet'}</p>
+                                <p className="text-sm text-gray-400 font-medium">{isRtl ? 'لا توجد إشعارات حالياً' : 'No notifications yet'}</p>
                             </div>
                         ) : (
-                            announcements.map((announcement) => (
-                                <div key={announcement.id} className={`p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors ${isRtl ? 'text-right' : 'text-left'}`}>
-                                    <h4 className="font-bold text-sm text-primary-dark mb-1">{announcement.title}</h4>
-                                    <p className="text-xs text-gray-600 leading-relaxed">{announcement.message}</p>
+                            notifications.map((n) => (
+                                <div key={n.id} className={`p-3 rounded-xl hover:bg-gray-100 transition-colors ${n.type === 'ORDER_STATUS' ? 'bg-primary/5 border border-primary/10' : 'bg-gray-50'} ${isRtl ? 'text-right' : 'text-left'}`}>
+                                    <h4 className="font-bold text-sm text-primary-dark mb-1 flex items-center justify-between">
+                                        {n.title}
+                                        {n.type === 'ORDER_STATUS' && <span className="w-2 h-2 bg-primary rounded-full" />}
+                                    </h4>
+                                    <p className="text-xs text-gray-600 leading-relaxed">{n.message}</p>
                                     <div className={`flex items-center justify-between mt-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
                                         <span className="text-[10px] text-gray-400">
-                                            {new Intl.DateTimeFormat(isRtl ? 'ar-DZ' : 'fr-FR', { dateStyle: 'medium' }).format(new Date(announcement.created_at))}
+                                            {new Intl.DateTimeFormat(isRtl ? 'ar-DZ' : 'fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(n.created_at))}
                                         </span>
-                                        {announcement.link && (
-                                            <a href={announcement.link} className="text-[10px] font-bold text-primary hover:underline">
-                                                {isRtl ? 'عرض المزيد' : 'View Details'}
+                                        {n.metadata?.orderId && (
+                                            <a href={`/${locale}/account/orders/${n.metadata.orderId}`} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                                                {isRtl ? 'عرض الطلب' : 'View Order'}
                                             </a>
                                         )}
                                     </div>

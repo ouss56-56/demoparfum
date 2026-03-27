@@ -8,9 +8,11 @@ import {
     ChevronRight,
     User,
     LogOut,
-    ShoppingCart
+    ShoppingCart,
+    Bell
 } from "lucide-react";
 import LogoutButton from "@/components/shop/LogoutButton";
+import NotificationBell from "@/components/shop/NotificationBell";
 import { getTranslations } from "next-intl/server";
 import { requireCustomerSession } from "@/lib/customer-auth";
 
@@ -20,7 +22,7 @@ interface Props {
 }
 
 export default async function AccountLayout({ children, params }: Props) {
-    await requireCustomerSession();
+    const session = await requireCustomerSession();
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "account" });
     const isRtl = locale === 'ar';
@@ -40,11 +42,14 @@ export default async function AccountLayout({ children, params }: Props) {
                     <aside className="lg:col-span-1">
                         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden sticky top-28">
                             <div className="p-8 bg-primary-dark">
-                                <div className="flex items-center gap-3 mb-1">
-                                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                                        <User className="w-4 h-4 text-primary" />
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                                            <User className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <h2 className="font-serif font-bold text-lg text-white tracking-tight">{t("my_account")}</h2>
                                     </div>
-                                    <h2 className="font-serif font-bold text-lg text-white tracking-tight">{t("my_account")}</h2>
+                                    <NotificationBell userId={session.id} />
                                 </div>
                                 <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-black">{t("trader_partner")}</p>
                             </div>
