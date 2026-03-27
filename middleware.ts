@@ -16,6 +16,9 @@ export const config = {
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    
+    // Inject the pathname into the REQUEST headers so Server Components can read it
+    request.headers.set("x-pathname", pathname);
 
     // ── RATE LIMITING ───────────────────────────────────────────────────────
     if (pathname.startsWith("/api/")) {
@@ -56,9 +59,6 @@ export async function middleware(request: NextRequest) {
             }
         }
 
-        // IMPORTANT: Let handleIntl process it for locale if needed, but for /api it's usually not needed
-        // However, some API routes might use Next-Intl. 
-        // For now, next() is safe since we verified auth.
         return NextResponse.next();
     }
 
@@ -117,8 +117,6 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    const response = handleIntl(request);
-    response.headers.set("x-pathname", pathname);
-    return response;
+    return handleIntl(request);
 }
 
