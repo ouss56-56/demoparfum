@@ -1,5 +1,6 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import RealtimeReloader from "@/components/admin/RealtimeReloader";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -16,6 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
                 </div>
             </main>
+            <RealtimeReloader />
         </div>
     );
 }

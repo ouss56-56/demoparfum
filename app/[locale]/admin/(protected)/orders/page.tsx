@@ -1,6 +1,5 @@
 import { sql } from "@/lib/db";
 import OrderClientView from "@/components/admin/OrderClientView";
-import RealtimeReloader from "@/components/admin/RealtimeReloader";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -84,7 +83,6 @@ export default async function AdminOrdersPage({ params }: { params: Promise<{ lo
                 </div>
 
                 <OrderClientView orders={serializedOrders} />
-                <RealtimeReloader />
             </div>
         );
     } catch (err) {
@@ -96,7 +94,6 @@ export default async function AdminOrdersPage({ params }: { params: Promise<{ lo
                     <p className="text-gray-500 mt-1 tracking-wide">{t("subtitle")}</p>
                 </div>
                 <OrderClientView orders={[]} />
-                <RealtimeReloader />
             </div>
         );
     }

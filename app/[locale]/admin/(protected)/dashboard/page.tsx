@@ -6,7 +6,6 @@ import { OrderService } from "@/services/order-service";
 import { NotificationService } from "@/services/notification-service";
 import SafeImage from "@/components/SafeImage";
 import Link from "next/link";
-import RealtimeReloader from "@/components/admin/RealtimeReloader";
 import ResetProfitButton from "@/components/admin/ResetProfitButton";
 import { getTranslations } from "next-intl/server";
 import { 
@@ -487,7 +486,6 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
                     </div>
                 </div>
             )}
-            <RealtimeReloader />
         </div>
     );
 }
