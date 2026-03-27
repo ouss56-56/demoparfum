@@ -138,7 +138,7 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
         ...o,
         totalPrice: Number(o.total_price),
         paymentStatus: o.payment_status,
-        createdAt: new Date(o.created_at),
+        createdAt: o.created_at ? new Date(o.created_at) : new Date(0),
         customer: {
             shopName: o.customers?.shop_name || "Unknown",
             name: o.customers?.name || ""
@@ -153,6 +153,7 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
     };
 
     const formatDate = (date: Date) => {
+        if (!date || isNaN(date.getTime())) return "N/A";
         return new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : "fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(date);
     };
 

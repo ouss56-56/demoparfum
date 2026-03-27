@@ -185,11 +185,14 @@ export const getFeaturedProducts = (limit = 8) => {
         async () => {
             try {
                 const products = await sql`
-                    SELECT * FROM products 
-                    WHERE status = 'ACTIVE' 
-                    AND tag_ids::jsonb ? 'featured' -- Simpler assumption if tags are slugs in array
-                    OR 'featured' = ANY(SELECT slug FROM tags t WHERE t.id = ANY(products.tag_ids))
-                    ORDER BY created_at DESC
+                    SELECT p.* FROM products p
+                    WHERE p.status = 'ACTIVE' 
+                    AND EXISTS (
+                        SELECT 1 FROM tags t 
+                        WHERE t.id = ANY(p.tag_ids) 
+                        AND t.slug = 'featured'
+                    )
+                    ORDER BY p.created_at DESC
                     LIMIT ${limit}
                 `;
                 // If it's pure UUIDs, we join
