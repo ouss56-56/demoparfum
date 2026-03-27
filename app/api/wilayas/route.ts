@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { getAllWilayas } from "algerian-geo";
+import { sql } from "@/lib/db";
 
 export async function GET() {
     try {
-        const wilayas = getAllWilayas().map((w: any) => ({
-            id: w.code,
-            number: w.code,
-            name: w.name,
-            name_en: w.name,
-            name_ar: w.name,
-        }));
+        const wilayas = await sql`
+            SELECT code as id, code as number, name, name as name_en, name as name_ar 
+            FROM wilayas 
+            ORDER BY code ASC
+        `;
 
         return NextResponse.json({ success: true, data: wilayas });
     } catch (error) {

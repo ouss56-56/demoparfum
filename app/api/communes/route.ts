@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCommunesByWilayaCode } from "algerian-geo";
+import { sql } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -10,14 +10,13 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        // algerian-geo uses string codes like "01", "02"
         const formattedId = String(wilayaId).padStart(2, '0');
-        const communes = getCommunesByWilayaCode(formattedId).map((c: any) => ({
-            id: c.name,
-            name: c.name,
-            name_en: c.name,
-            name_ar: c.name,
-        }));
+        const communes = await sql`
+            SELECT name as id, name, name as name_en, name as name_ar 
+            FROM communes 
+            WHERE wilaya_code = ${formattedId}
+            ORDER BY name ASC
+        `;
 
         return NextResponse.json({ success: true, data: communes });
     } catch (error) {
