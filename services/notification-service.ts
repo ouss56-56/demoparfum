@@ -34,10 +34,15 @@ export const getNotifications = async (limit = 30) => {
 
 // ── GET UNREAD COUNT ─────────────────────────────────────────────────────
 export const getUnreadCount = async () => {
-    const [result] = await sql`
-        SELECT COUNT(*) as count FROM notifications WHERE is_read = false
-    `;
-    return Number(result.count) || 0;
+    try {
+        const [result] = await sql`
+            SELECT COUNT(*) as count FROM notifications WHERE is_read = false
+        `;
+        return Number(result.count) || 0;
+    } catch (e) {
+        console.error("Notification getUnreadCount error:", e);
+        return 0;
+    }
 };
 
 // ── MARK AS READ ─────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 -- Run this in your Supabase SQL Editor to fix access and real-time issues.
 -- ============================================================================
 
--- 1. Ensure the 'admins' table exists correctly
+-- 1. Ensure the 'admins' table and its columns exist correctly
 CREATE TABLE IF NOT EXISTS admins (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
@@ -12,6 +12,17 @@ CREATE TABLE IF NOT EXISTS admins (
     role TEXT DEFAULT 'ADMIN',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure columns exist if the table was created by a previous script without them
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admins' AND column_name='password_hash') THEN
+        ALTER TABLE admins ADD COLUMN password_hash TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='admins' AND column_name='role') THEN
+        ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'ADMIN';
+    END IF;
+END $$;
 
 -- 2. Provision/Reset the default Super Admin
 -- Password is '123456'
@@ -24,7 +35,10 @@ VALUES (
     'SUPER_ADMIN'
 )
 ON CONFLICT (email) 
-DO UPDATE SET role = 'SUPER_ADMIN', name = 'Super Admin';
+DO UPDATE SET 
+    role = 'SUPER_ADMIN', 
+    name = 'Super Admin',
+    password_hash = EXCLUDED.password_hash;
 
 -- 3. Enable RLS and Policies for Admins table
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
@@ -44,20 +58,9 @@ BEGIN
 END $$;
 
 -- Enable replication for specific tables that need real-time updates
--- This allows the 'postgres_changes' event to broadcast to the frontend.
-ALTER PUBLICATION supabase_realtime ADD TABLE orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE products;
-ALTER PUBLICATION supabase_realtime ADD TABLE customers;
-ALTER PUBLICATION supabase_realtime ADD TABLE inventory_logs;
-ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
-ALTER PUBLICATION supabase_realtime ADD TABLE brands;
-
--- If they were already added, the above might error silently or be ignored.
--- To be safe, we can use this alternative if ADD TABLE complains about existing:
-/*
+-- Using SET TABLE ensures this exact list is synchronized without "already exists" errors.
 ALTER PUBLICATION supabase_realtime SET TABLE 
-    orders, products, customers, inventory_logs, notifications, brands;
-*/
+    orders, products, customers, inventory_logs, notifications, brands, admins;
 
 -- 5. Fix RLS for real-time visibility
 -- Real-time usually requires either 'SELECT' access for 'anon' or 'authenticated' roles.
