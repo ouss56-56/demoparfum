@@ -1,6 +1,9 @@
 -- ============================================================================
--- ADD COMMUNE TO CREATE_ORDER
+-- ADD COMMUNE COLUMN AND UPDATE CREATE_ORDER 
 -- ============================================================================
+
+-- Ensure the column exists first
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS commune TEXT;
 
 CREATE OR REPLACE FUNCTION create_order(
     p_customer_id UUID,

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Search, ChevronDown, CheckCircle2, Clock, Truck, PackageCheck, XCircle, FileText, X, AlertCircle, Trash2, MapPin, Navigation } from "lucide-react";
 import { adminUpdateOrderStatus, updateOrderPayment, generateInvoiceAction, deleteOrderAction } from "@/app/admin/actions/order";
@@ -22,10 +23,27 @@ export default function OrderClientView({ orders }: { orders: any[] }) {
     const isRtl = locale === 'ar';
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            router.refresh();
-        }, 15000);
-        return () => clearInterval(interval);
+        // Subscribe to real-time changes on the 'orders' table
+        // This replaces the 15s interval polling for better efficiency
+        const channel = supabase
+            .channel('admin-orders-realtime')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to INSERT, UPDATE, DELETE
+                    schema: 'public',
+                    table: 'orders',
+                },
+                (payload) => {
+                    console.log('Real-time order change detected:', payload);
+                    router.refresh();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [router]);
 
     const filteredOrders = orders.filter(o => {
