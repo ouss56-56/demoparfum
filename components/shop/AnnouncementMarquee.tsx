@@ -109,7 +109,7 @@ export default function AnnouncementMarquee() {
                                 </span>
                                 {ann.link && (
                                     <Link 
-                                        href={ann.link.startsWith('http') ? ann.link : `/${locale}${ann.link.startsWith('/') ? '' : '/'}${ann.link}`} 
+                                        href={ann.link.startsWith('http') ? ann.link : (ann.link.startsWith('/') ? `/${locale}${ann.link}` : '#')} 
                                         className="text-[#D4AF37] hover:text-white text-[9px] font-bold uppercase tracking-widest transition-colors"
                                         target={ann.link.startsWith('http') ? "_blank" : undefined}
                                         rel={ann.link.startsWith('http') ? "noopener noreferrer" : undefined}

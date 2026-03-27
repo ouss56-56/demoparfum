@@ -16,9 +16,35 @@ export const config = {
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
-    
-    // Inject the pathname into the REQUEST headers so Server Components can read it
-    request.headers.set("x-pathname", pathname);
+
+    // 1. Prepare request headers for Server Components
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-pathname', pathname);
+
+    // 2. Define a helper to run intl middleware while preserving our headers
+    const handleIntl = (req: NextRequest) => {
+        const response = intlMiddleware(req);
+        
+        // If it's a redirect, return as is
+        if (response.status >= 300 && response.status < 400) {
+            return response;
+        }
+
+        // For non-redirects, we want to ensure the REQUEST headers reach the Server Components.
+        // We create a new 'next' response that explicitly carries our modified request headers.
+        const finalResponse = NextResponse.next({
+            request: {
+                headers: requestHeaders,
+            },
+        });
+
+        // Copy over the headers (including cookies) from the intl middleware response
+        response.headers.forEach((value, key) => {
+            finalResponse.headers.set(key, value);
+        });
+
+        return finalResponse;
+    };
 
     // ── RATE LIMITING ───────────────────────────────────────────────────────
     if (pathname.startsWith("/api/")) {
@@ -26,8 +52,8 @@ export async function middleware(request: NextRequest) {
         const shouldLimit = rateLimitedPaths.some((p) => pathname.startsWith(p));
 
         if (shouldLimit) {
-            const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-                "unknown";
+            const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                       "unknown";
             if (isRateLimited(ip)) {
                 return NextResponse.json(
                     { success: false, error_code: "RATE_LIMITED", message: "Too many requests." },
@@ -62,13 +88,11 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    const handleIntl = (req: NextRequest) => intlMiddleware(req);
-
     // ── ADMIN PROTECTION ──────────────────────────────────────────────────
     if (pathname.includes("/admin")) {
         const locale = pathname.split('/')[1] || routing.defaultLocale;
         const lang = routing.locales.includes(locale as any) ? locale : routing.defaultLocale;
-
+        
         const adminLoginPath = `/${lang}/admin/login`;
         const adminDashboardPath = `/${lang}/admin/dashboard`;
 
@@ -119,4 +143,3 @@ export async function middleware(request: NextRequest) {
 
     return handleIntl(request);
 }
-

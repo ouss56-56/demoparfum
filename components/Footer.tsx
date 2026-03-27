@@ -40,7 +40,7 @@ export default function Footer({ settings }: FooterProps) {
 
                     {/* Contact Row */}
                     <div className="flex flex-wrap items-center gap-6">
-                        <a href={`https://wa.me/${settings.whatsapp_number.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white/50 hover:text-[#D4AF37] transition-colors text-sm">
+                        <a href={`https://wa.me/${settings.whatsapp_number?.replace(/\+/g, '') || ''}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white/50 hover:text-[#D4AF37] transition-colors text-sm">
                             <Phone className="w-4 h-4" />
                             <span>{settings.whatsapp_number}</span>
                         </a>
@@ -59,7 +59,7 @@ export default function Footer({ settings }: FooterProps) {
                         <a href={`https://facebook.com/${settings.facebook_page}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-[#D4AF37] hover:border-transparent transition-all group">
                             <Facebook className="w-4 h-4 text-white/40 group-hover:text-white" />
                         </a>
-                        <a href={`https://wa.me/${settings.whatsapp_number.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-green-600 hover:border-transparent transition-all group">
+                        <a href={`https://wa.me/${settings.whatsapp_number?.replace(/\+/g, '') || ''}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-green-600 hover:border-transparent transition-all group">
                             <MessageCircle className="w-4 h-4 text-white/40 group-hover:text-white" />
                         </a>
                     </div>

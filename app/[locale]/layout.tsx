@@ -81,8 +81,12 @@ export default async function RootLayout(props: {
                         >
                             {children}
                         </main>
-                        <Footer settings={settings} />
-                        <WhatsAppButton phoneNumber={settings.whatsapp_number} />
+                        {!isAdminPage && (
+                            <>
+                                <Footer settings={settings} />
+                                <WhatsAppButton phoneNumber={settings.whatsapp_number} />
+                            </>
+                        )}
                         <ToastContainer />
                     </CartProvider>
                 </NextIntlClientProvider>

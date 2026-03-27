@@ -121,7 +121,8 @@
         "select_size": "اختر الحجم",
         "configure_quantity": "تحديد الكمية",
         "units_of": "وحدات من",
-        "wholesale_note": "تغليف بالجملة احترافي للحجم المختار"
+        "wholesale_note": "تغليف بالجملة احترافي للحجم المختار",
+        "add_to_cart": "أضف إلى السلة"
     },
     "catalog": {
         "title": "مجموعتنا",

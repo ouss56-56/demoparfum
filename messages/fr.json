@@ -121,7 +121,8 @@
         "select_size": "Choisir la taille",
         "configure_quantity": "Configurer la quantité",
         "units_of": "Unités de",
-        "wholesale_note": "Emballage de gros professionnel pour la taille sélectionnée"
+        "wholesale_note": "Emballage de gros professionnel pour la taille sélectionnée",
+        "add_to_cart": "Ajouter au panier"
     },
     "catalog": {
         "title": "Notre Collection",
