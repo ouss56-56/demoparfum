@@ -58,10 +58,10 @@ export async function POST(request: Request) {
 
         return response;
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Admin login error:", error);
         return NextResponse.json(
-            { success: false, error: "Internal server error" },
+            { success: false, error: error?.message || "Internal server error" },
             { status: 500 }
         );
     }
