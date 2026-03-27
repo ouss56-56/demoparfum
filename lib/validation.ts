@@ -62,6 +62,7 @@ export const createOrderSchema = z.object({
       wilayaNumber: z.string().optional(),
       wilayaName: z.string().optional(),
       wilaya: z.string().optional(), // Combined string for backward compat
+      commune: z.string().optional(),
       address: z.string().optional(),
       notes: z.string().optional(),
     })

@@ -134,10 +134,16 @@ p, span, label, a, li, td, th, input, textarea, select, button {
   border: 1.5px solid #e5e5e5;
   border-radius: 0.5rem;
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: 1rem; /* Prevent auto-zoom on iOS (min 16px) */
   transition: all 0.3s ease;
   outline: none;
   background: #fafafa;
+}
+
+@media (min-width: 768px) {
+  .input-luxury {
+    font-size: 0.9375rem;
+  }
 }
 
 .input-luxury:focus {

@@ -20,9 +20,9 @@ export async function GET(request: Request) {
         if (type === "inventory") {
             const products = await sql`SELECT * FROM products ORDER BY name ASC`;
 
-            csvData = "ID,Name,Brand,Category,BasePrice,Stock,LowStockThreshold\n";
+            csvData = "ID,Name,Brand,Category,BasePrice,Stock,Commune,LowStockThreshold\n";
             (products || []).forEach((p: any) => {
-                csvData += `${p.id},"${p.name}","${p.brand}","${p.category_id || ''}",${p.base_price},${p.stock_weight || 0},${p.low_stock_threshold || 500}\n`;
+                csvData += `${p.id},"${p.name}","${p.brand}","${p.category_id || ''}",${p.base_price},${p.stock_weight || 0},"${p.commune || ''}",${p.low_stock_threshold || 500}\n`;
             });
             filename = `inventory_report_${new Date().toISOString().split('T')[0]}.csv`;
         }
@@ -37,10 +37,10 @@ export async function GET(request: Request) {
                 ORDER BY o.created_at DESC
             `;
 
-            csvData = "OrderID,Date,Customer,TotalItems,TotalRevenue,Status\n";
+            csvData = "OrderID,Date,Customer,Commune,TotalItems,TotalRevenue,Status\n";
             (orders || []).forEach((o: any) => {
                 const createdAt = new Date(o.created_at);
-                csvData += `${o.id},${createdAt.toISOString().split('T')[0]},"${o.shop_name || ''}",${o.total_items || 0},${o.total_price},${o.status}\n`;
+                csvData += `${o.id},${createdAt.toISOString().split('T')[0]},"${o.shop_name || ''}","${o.commune || ''}",${o.total_items || 0},${o.total_price},${o.status}\n`;
             });
             filename = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
         }
@@ -58,10 +58,10 @@ export async function GET(request: Request) {
                 }
             });
 
-            csvData = "CustomerID,ShopName,ContactName,Phone,Wilaya,TotalOrders,TotalSpent\n";
+            csvData = "CustomerID,ShopName,ContactName,Phone,Wilaya,Commune,TotalOrders,TotalSpent\n";
             (customers || []).forEach((c: any) => {
                 const stats = customerOrdersMap.get(c.id) || { count: 0, totalSpent: 0 };
-                csvData += `${c.id},"${c.shop_name}","${c.name}","${c.phone}","${c.wilaya}",${stats.count},${stats.totalSpent}\n`;
+                csvData += `${c.id},"${c.shop_name}","${c.name}","${c.phone}","${c.wilaya}","${c.commune}",${stats.count},${stats.totalSpent}\n`;
             });
             filename = `customers_report_${new Date().toISOString().split('T')[0]}.csv`;
         } else {

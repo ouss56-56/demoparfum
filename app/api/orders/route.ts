@@ -48,6 +48,7 @@ export async function POST(request: Request) {
                 notes: initialLogMessage,
                 wilayaNumber: shippingData?.wilayaNumber,
                 wilayaName: shippingData?.wilayaName,
+                commune: shippingData?.commune,
             });
 
             // Log success (fire-and-forget — never block the response)

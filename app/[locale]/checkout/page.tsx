@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useTranslations, useLocale } from "next-intl";
 import WilayaSelector from "@/components/WilayaSelector";
+import CommuneSelector from "@/components/CommuneSelector";
 
 export default function CheckoutPage() {
     const router = useRouter();
@@ -24,6 +25,7 @@ export default function CheckoutPage() {
         phone: "",
         wilayaNumber: "",
         wilayaName: "",
+        commune: "",
         address: "",
         notes: "",
     });
@@ -44,6 +46,7 @@ export default function CheckoutPage() {
                         address: prev.address || c.address || "",
                         wilayaNumber: prev.wilayaNumber || (c.wilaya && c.wilaya.includes(" - ") ? c.wilaya.split(" - ")[0] : c.wilayaNumber || ""),
                         wilayaName: prev.wilayaName || (c.wilaya && c.wilaya.includes(" - ") ? c.wilaya.split(" - ")[1] : c.wilayaName || ""),
+                        commune: prev.commune || c.commune || "",
                     }));
                 }
             })
@@ -54,7 +57,12 @@ export default function CheckoutPage() {
     const isValidOrder = totalPrice >= MIN_ORDER_AMOUNT;
 
     const handleWilayaChange = (number: string, name: string) => {
-        setForm(prev => ({ ...prev, wilayaNumber: number, wilayaName: name }));
+        setForm(prev => ({ 
+            ...prev, 
+            wilayaNumber: number, 
+            wilayaName: name,
+            commune: "" // Reset commune when wilaya changes
+        }));
     };
 
     const placeOrder = async () => {
@@ -204,6 +212,14 @@ export default function CheckoutPage() {
                                                 onChange={(wilaya) => handleWilayaChange(wilaya.id, wilaya.name)}
                                             />
                                         </div>
+                                        <div className={locale === 'ar' ? 'text-right' : 'text-left'}>
+                                            <label htmlFor="commune" className="block text-sm text-gray-500 mb-1">{t("commune")}</label>
+                                            <CommuneSelector
+                                                wilayaId={form.wilayaNumber}
+                                                value={form.commune}
+                                                onChange={(commune) => setForm({ ...form, commune: commune.name })}
+                                            />
+                                        </div>
                                     </div>
                                     <div className={locale === 'ar' ? 'text-right' : 'text-left'}>
                                         <label htmlFor="address" className="block text-sm text-gray-500 mb-1">{t("address")}</label>
@@ -294,7 +310,7 @@ export default function CheckoutPage() {
                             {/* Place Order */}
                             <button
                                 onClick={placeOrder}
-                                disabled={placing || !isValidOrder || !form.name || !form.phone || !form.wilayaNumber || !form.address}
+                                disabled={placing || !isValidOrder || !form.name || !form.phone || !form.wilayaNumber || !form.commune || !form.address}
                                 className="btn-primary w-full text-center text-lg py-4 disabled:opacity-50"
                             >
                                 {placing ? (

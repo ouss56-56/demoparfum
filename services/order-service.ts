@@ -50,6 +50,7 @@ interface CreateOrderInput {
     notes?: string;
     wilayaNumber?: string;
     wilayaName?: string;
+    commune?: string;
 }
 
 function mapOrder(data: any): Order {
@@ -172,7 +173,8 @@ export const createOrder = async (input: CreateOrderInput) => {
             ${sql.json(itemsWithData)}, 
             ${input.wilayaName || null}, 
             ${input.wilayaNumber || null}, 
-            ${input.notes || "Order placed successfully."}
+            ${input.notes || "Order placed successfully."},
+            ${input.commune || null}
         ) as order_id
     `;
 
