@@ -7,6 +7,7 @@ import { NotificationService } from "@/services/notification-service";
 import SafeImage from "@/components/SafeImage";
 import Link from "next/link";
 import ResetProfitButton from "@/components/admin/ResetProfitButton";
+import RealtimeReloader from "@/components/admin/RealtimeReloader";
 import { getTranslations } from "next-intl/server";
 import { 
     AlertTriangle, 
@@ -179,7 +180,9 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
     };
 
     return (
-        <div className={`space-y-8 animate-in fade-in duration-500 ${locale === 'ar' ? 'rtl' : 'ltr'}`}>
+        <div className={`relative space-y-8 animate-in fade-in duration-500 ${locale === 'ar' ? 'rtl' : 'ltr'}`}>
+            <RealtimeReloader />
+            
             <div>
                 <h1 className="text-3xl font-serif font-bold text-primary-dark tracking-tight">{t("title")}</h1>
                 <p className="text-gray-500 mt-1 tracking-wide">{t("subtitle")}</p>

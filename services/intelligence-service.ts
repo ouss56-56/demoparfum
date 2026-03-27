@@ -34,7 +34,7 @@ export const getRestockSuggestions = async () => {
         const weightSold30d = recentDemandMap.get(product.id) || 0;
         const avgDailyWeightSales = weightSold30d / 30;
 
-        const currentStock = product.stock_weight || 0;
+        const currentStock = Number(product.stock ?? product.stock_weight ?? 0);
         const estimatedDaysLeft = avgDailyWeightSales > 0 ? Math.floor(currentStock / avgDailyWeightSales) : 999;
 
         const lowStockThreshold = 500; // Simplified internal threshold
@@ -95,7 +95,7 @@ export const getDeadStock = async () => {
     recentOrders.forEach((item: any) => activeProductIds.add(item.product_id));
 
     const products = await sql`
-        SELECT * FROM products WHERE stock_weight > 0
+        SELECT * FROM products WHERE stock_weight > 0 OR stock > 0
     `;
 
     if (!products) return [];
@@ -220,10 +220,10 @@ export const getProfitAnalytics = async () => {
 // ── INVENTORY HEALTH SCORE ────────────────────────────────────────────────
 export const getInventoryHealthScore = async () => {
     let score = 100;
-    const products = await sql`SELECT stock_weight FROM products`.catch(() => []);
+    const products = await sql`SELECT stock, stock_weight FROM products`.catch(() => []);
     if (!products || products.length === 0) return 100;
 
-    const lowStockCount = products.filter((p: any) => (p.stock_weight || 0) <= 500).length;
+    const lowStockCount = products.filter((p: any) => Number(p.stock ?? p.stock_weight ?? 0) <= 500).length;
     score -= (lowStockCount * 2); 
 
     const deadStock = await getDeadStock();

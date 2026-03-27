@@ -79,7 +79,7 @@ export const getActiveProducts = (filters?: {
                 WHERE status = 'ACTIVE'
                 ${filters?.categoryId ? sql`AND category_id = ${filters.categoryId}` : sql``}
                 ${filters?.brand ? sql`AND brand = ${filters.brand}` : sql``}
-                ${filters?.inStock ? sql`AND stock > 0` : sql``}
+                ${filters?.inStock ? sql`AND (stock > 0 OR stock_weight > 0)` : sql``}
                 ORDER BY created_at DESC
             `;
 

@@ -7,9 +7,10 @@ export const decrementStock = async (productId: string, quantity: number, weight
     // Direct SQL update with stock_weight
     const [product] = await sql`
         UPDATE products 
-        SET stock_weight = stock_weight - ${totalWeight}
+        SET stock_weight = stock_weight - ${totalWeight},
+            stock = stock - ${totalWeight}
         WHERE id = ${productId}
-        RETURNING stock_weight
+        RETURNING stock_weight, stock
     `;
 
     // Log the change
@@ -26,9 +27,10 @@ export const incrementStock = async (productId: string, quantity: number, weight
     
     const [product] = await sql`
         UPDATE products 
-        SET stock_weight = stock_weight + ${totalWeight}
+        SET stock_weight = stock_weight + ${totalWeight},
+            stock = stock + ${totalWeight}
         WHERE id = ${productId}
-        RETURNING stock_weight
+        RETURNING stock_weight, stock
     `;
 
     await sql`
@@ -76,7 +78,8 @@ export const adjustStock = async (
 ) => {
     const [product] = await sql`
         UPDATE products 
-        SET stock_weight = stock_weight + ${weightAmount}
+        SET stock_weight = stock_weight + ${weightAmount},
+            stock = stock + ${weightAmount}
         WHERE id = ${productId}
         RETURNING *
     `;
