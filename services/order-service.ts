@@ -107,7 +107,7 @@ export const createOrder = async (input: CreateOrderInput) => {
     // We need to fetch prices and volume data first for the RPC
     const productIds = [...new Set(input.items.map(i => i.productId))];
     const products = await sql`
-        SELECT * FROM products WHERE id IN (${productIds})
+        SELECT * FROM products WHERE id IN ${sql(productIds)}
     `;
 
     if (!products || products.length === 0) throw new Error("Failed to fetch products for order validation");

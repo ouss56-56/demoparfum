@@ -23,6 +23,7 @@ export default function CommuneSelector({ wilayaId, value, onChange, error, labe
     const [searchTerm, setSearchTerm] = useState("");
     const [communes, setCommunes] = useState<CommuneItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const [fetchError, setFetchError] = useState(false);
     const t = useTranslations("common.labels");
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -34,14 +35,21 @@ export default function CommuneSelector({ wilayaId, value, onChange, error, labe
 
         const fetchCommunes = async () => {
             setLoading(true);
+            setFetchError(false);
+            console.log(`[CommuneSelector] Fetching communes for Wilaya ID: ${wilayaId}`);
             try {
                 const response = await fetch(`/api/communes?wilayaId=${wilayaId}`);
                 const data = await response.json();
                 if (data.success) {
+                    console.log(`[CommuneSelector] Successfully loaded ${data.data.length} communes`);
                     setCommunes(data.data.map((c: any) => ({ id: c.id, name: c.name })));
+                } else {
+                    console.error("[CommuneSelector] API returned error:", data.error);
+                    setFetchError(true);
                 }
             } catch (err) {
-                console.error("Fetch communes error:", err);
+                console.error("[CommuneSelector] Fetch exception:", err);
+                setFetchError(true);
             } finally {
                 setLoading(false);
             }
@@ -88,7 +96,7 @@ export default function CommuneSelector({ wilayaId, value, onChange, error, labe
                 }`}
             >
                 <span className={selectedCommune ? "text-gray-900" : "text-gray-400"}>
-                    {loading ? "..." : selectedCommune ? `${selectedCommune.name}` : t("select_commune")}
+                    {loading ? "..." : fetchError ? "Error loading" : selectedCommune ? `${selectedCommune.name}` : t("select_commune")}
                 </span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
             </button>
