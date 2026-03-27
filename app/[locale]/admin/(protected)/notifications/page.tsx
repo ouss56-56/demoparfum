@@ -13,7 +13,7 @@ export default async function AdminNotificationsPage({
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "admin.notifications" });
 
-    const notifications: any[] = await getNotifications(50);
+    const notifications: any[] = await getNotifications(null, 50);
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
