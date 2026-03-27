@@ -220,8 +220,8 @@ export const getProfitAnalytics = async () => {
 // ── INVENTORY HEALTH SCORE ────────────────────────────────────────────────
 export const getInventoryHealthScore = async () => {
     let score = 100;
-    const products = await sql`SELECT stock_weight FROM products`;
-    if (!products) return 100;
+    const products = await sql`SELECT stock_weight FROM products`.catch(() => []);
+    if (!products || products.length === 0) return 100;
 
     const lowStockCount = products.filter((p: any) => (p.stock_weight || 0) <= 500).length;
     score -= (lowStockCount * 2); 

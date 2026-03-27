@@ -73,6 +73,29 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Real-time notifications visibility" ON notifications;
 CREATE POLICY "Real-time notifications visibility" ON notifications FOR SELECT USING (true);
 
+-- 6. Ensure core tables exist sufficiently for the dashboard to load (Prevent 404/Null crashes)
+-- These are basic definitions that 'fix_all_platform.sql' will further refine.
+CREATE TABLE IF NOT EXISTS products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    stock_weight DECIMAL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    total_price DECIMAL DEFAULT 0,
+    status TEXT DEFAULT 'PENDING',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT,
+    shop_name TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- ============================================================
 -- DONE!
 -- Please refresh your admin dashboard after running this.

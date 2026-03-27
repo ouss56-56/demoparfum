@@ -34,22 +34,24 @@ export const createAdminUser = async (data: {
 
 export const getAdminStats = async () => {
     try {
-        const [counts] = await sql`
-            SELECT 
-                (SELECT count(*) FROM orders) as orders_count,
-                (SELECT count(*) FROM customers) as customers_count,
-                (SELECT count(*) FROM products) as products_count,
-                (SELECT SUM(total_price) FROM orders WHERE status != 'CANCELLED') as total_revenue
-        `;
+        // Fetch stats individually to prevent one missing table from breaking everything
+        const [ordersResult] = await sql`SELECT count(*) as count FROM orders`.catch(() => [{ count: 0 }]);
+        const [customersResult] = await sql`SELECT count(*) as count FROM customers`.catch(() => [{ count: 0 }]);
+        const [productsResult] = await sql`SELECT count(*) as count FROM products`.catch(() => [{ count: 0 }]);
+        const [revenueResult] = await sql`
+            SELECT SUM(total_price) as total 
+            FROM orders 
+            WHERE status != 'CANCELLED'
+        `.catch(() => [{ total: 0 }]);
 
         return {
-            totalOrders: Number(counts.orders_count) || 0,
-            totalCustomers: Number(counts.customers_count) || 0,
-            totalProducts: Number(counts.products_count) || 0,
-            totalRevenue: Number(counts.total_revenue) || 0,
+            totalOrders: Number(ordersResult?.count) || 0,
+            totalCustomers: Number(customersResult?.count) || 0,
+            totalProducts: Number(productsResult?.count) || 0,
+            totalRevenue: Number(revenueResult?.total) || 0,
         };
     } catch (error) {
-        console.error("Error getting admin stats:", error);
+        console.error("Error in AdminService.getAdminStats:", error);
         return {
             totalOrders: 0,
             totalCustomers: 0,
