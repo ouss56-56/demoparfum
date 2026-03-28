@@ -19,16 +19,21 @@ export const createNotification = async (
 
 // ── GET ALL NOTIFICATIONS ────────────────────────────────────────────────
 export const getNotifications = async (userId: string | null = null, limit = 30) => {
-    const data = userId 
-        ? await sql`SELECT * FROM notifications WHERE user_id = ${userId} OR user_id IS NULL ORDER BY created_at DESC LIMIT ${limit}`
-        : await sql`SELECT * FROM notifications WHERE user_id IS NULL ORDER BY created_at DESC LIMIT ${limit}`;
+    try {
+        const data = userId 
+            ? await sql`SELECT * FROM notifications WHERE user_id = ${userId} OR user_id IS NULL ORDER BY created_at DESC LIMIT ${limit}`
+            : await sql`SELECT * FROM notifications WHERE user_id IS NULL ORDER BY created_at DESC LIMIT ${limit}`;
 
-    return (data || []).map(n => ({
-        id: n.id,
-        ...n,
-        isRead: n.is_read,
-        createdAt: new Date(n.created_at)
-    }));
+        return (data || []).map(n => ({
+            id: n.id,
+            ...n,
+            isRead: n.is_read,
+            createdAt: n.created_at ? new Date(n.created_at) : new Date()
+        }));
+    } catch (e) {
+        console.error("getNotifications error:", e);
+        return [];
+    }
 };
 
 // ── GET UNREAD COUNT ─────────────────────────────────────────────────────

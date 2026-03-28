@@ -67,11 +67,10 @@ export default async function AdminInvoicesPage({ params }: { params: Promise<{ 
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <Link
-                                            href={`/${locale}/admin/orders/${invoice.orderId}/invoice/print`}
-                                            target="_blank"
+                                            href={`/${locale}/admin/invoices/${invoice.orderId}`}
                                             className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-white hover:bg-blue-600 border border-blue-600/20 hover:border-transparent rounded-lg transition-colors inline-flex items-center gap-1.5"
                                         >
-                                            <ExternalLink className="w-3.5 h-3.5" /> {t("view_output")}
+                                            <ExternalLink className="w-3.5 h-3.5" /> {t("view_details") || "View Details"}
                                         </Link>
                                     </td>
                                 </tr>

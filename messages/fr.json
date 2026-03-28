@@ -617,6 +617,9 @@
                 "document": "Document"
             },
             "view_output": "Voir Sortie",
+            "view_details": "Voir Détails",
+            "details_title": "Détails de la Facture",
+            "print": "Imprimer la Facture",
             "no_invoices": "Aucune facture générée pour le moment. Les factures sont créées automatiquement lors du traitement des commandes."
         },
         "analytics": {

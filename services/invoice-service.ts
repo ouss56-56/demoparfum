@@ -18,8 +18,8 @@ export const getInvoices = async () => {
                     FROM order_items oi WHERE oi.order_id = i.order_id
                 ) as order_items
             FROM invoices i
-            JOIN customers c ON i.customer_id = c.id
-            JOIN orders o ON i.order_id = o.id
+            LEFT JOIN customers c ON i.customer_id = c.id
+            LEFT JOIN orders o ON i.order_id = o.id
             ORDER BY i.issue_date DESC
         `;
 
@@ -107,8 +107,8 @@ export const getInvoiceById = async (invoiceNumber: string) => {
                     FROM order_items oi WHERE oi.order_id = i.order_id
                 ) as order_items
             FROM invoices i
-            JOIN customers c ON i.customer_id = c.id
-            JOIN orders o ON i.order_id = o.id
+            LEFT JOIN customers c ON i.customer_id = c.id
+            LEFT JOIN orders o ON i.order_id = o.id
             WHERE i.invoice_number = ${invoiceNumber}
             LIMIT 1
         `;
@@ -150,24 +150,32 @@ export const getInvoiceById = async (invoiceNumber: string) => {
 };
 
 // ── GET INVOICE BY ORDER ID ──────────────────────────────────────────────
-export const getInvoiceByOrderId = async (orderId: string) => {
-    // Strategy 1: Look up in invoices table
+export const getInvoiceByOrderId = async (id: string) => {
+    if (!id) return null;
+
+    // Strategy 0: If it looks like an invoice number, try getInvoiceById
+    if (id.startsWith('INV-')) {
+        const inv = await getInvoiceById(id);
+        if (inv) return inv;
+    }
+
+    // Strategy 1: Look up in invoices table by order_id
     try {
         const [data] = await sql`
-            SELECT invoice_number FROM invoices WHERE order_id = ${orderId} LIMIT 1
+            SELECT invoice_number FROM invoices WHERE order_id = ${id}::UUID LIMIT 1
         `;
         if (data?.invoice_number) {
             return getInvoiceById(data.invoice_number);
         }
     } catch (e) {
-        console.error("getInvoiceByOrderId table lookup failed:", e);
+        // Silently continue to next strategy if UUID cast fails or other error
     }
 
     // Strategy 2: Look up from orders.invoice_number column
     try {
         const [order] = await sql`
             SELECT invoice_number, invoice, customer_id, total_price, status, created_at
-            FROM orders WHERE id = ${orderId} LIMIT 1
+            FROM orders WHERE id = ${id}::UUID LIMIT 1
         `;
         if (order?.invoice_number) {
             const result = await getInvoiceById(order.invoice_number);
@@ -176,16 +184,16 @@ export const getInvoiceByOrderId = async (orderId: string) => {
 
         // Strategy 3: Construct from orders.invoice JSONB  
         if (order?.invoice?.invoiceNumber) {
-            const [customer] = await sql`SELECT * FROM customers WHERE id = ${order.customer_id} LIMIT 1`;
+            const [customer] = await sql`SELECT * FROM customers WHERE id = ${order.customer_id}::UUID LIMIT 1`;
             const orderItems = await sql`
                 SELECT oi.*, 
                     (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id) as product
-                FROM order_items oi WHERE oi.order_id = ${orderId}
+                FROM order_items oi WHERE oi.order_id = ${id}::UUID
             `;
 
             return {
                 id: order.invoice.invoiceNumber,
-                orderId,
+                orderId: id,
                 invoiceNumber: order.invoice.invoiceNumber,
                 issueDate: order.invoice.issueDate ? new Date(order.invoice.issueDate) : new Date(order.created_at),
                 totalAmount: Number(order.invoice.totalAmount || order.total_price || 0),
@@ -193,7 +201,7 @@ export const getInvoiceByOrderId = async (orderId: string) => {
                 amountPaid: Number(order.amount_paid || 0),
                 paymentStatus: order.payment_status || "UNPAID",
                 order: {
-                    id: orderId,
+                    id,
                     status: order.status,
                     totalPrice: Number(order.total_price || 0),
                     customer: customer ? {
@@ -217,7 +225,7 @@ export const getInvoiceByOrderId = async (orderId: string) => {
             };
         }
     } catch (e) {
-        console.error("getInvoiceByOrderId JSONB fallback failed:", e);
+        // Silently continue or return null at the end
     }
 
     return null;
