@@ -188,7 +188,7 @@ export const getOrderById = async (id: string): Promise<Order | null> => {
     return mapOrder(data);
 };
 
-export const getOrdersByCustomer = (customerId: string, limit = 50): Promise<Order[]> => {
+export const getOrdersByCustomer = (customerId: string, limit = 10, skip = 0): Promise<Order[]> => {
     return unstable_cache(
         async () => {
             const data = await sql`
@@ -208,17 +208,47 @@ export const getOrdersByCustomer = (customerId: string, limit = 50): Promise<Ord
                 LEFT JOIN invoices inv ON o.id = inv.order_id
                 WHERE o.customer_id = ${customerId}
                 ORDER BY o.created_at DESC
-                LIMIT ${limit}
+                LIMIT ${limit} OFFSET ${skip}
             `;
             return (data || []).map(mapOrder);
         },
-        [`orders-${customerId}-${limit}`],
+        [`orders-${customerId}-${limit}-${skip}`],
         { tags: [`orders:${customerId}`, "orders"], revalidate: 30 }
     )();
 };
 
-export const updateOrderStatus = async (orderId: string, status: string, changedBy: string = "ADMIN") => {
-    const updated = await handleStatusUpdate(orderId, status, changedBy);
+export const countOrdersByCustomer = async (customerId: string) => {
+    const [result] = await sql`SELECT count(*) as count FROM orders WHERE customer_id = ${customerId}`;
+    return Number(result?.count || 0);
+};
+
+export const getReorderItems = async (orderId: string) => {
+    const items = await sql`
+        SELECT 
+            oi.*,
+            p.name
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ${orderId}
+    `;
+    return (items || []).map(item => ({
+        productId: item.product_id,
+        quantity: item.quantity,
+        volumeId: item.volume_id,
+        name: item.name
+    }));
+};
+
+export const updateOrderShipping = async (orderId: string, data: any) => {
+    await sql`
+        UPDATE orders 
+        SET shipping = ${sql.json(data)}
+        WHERE id = ${orderId}
+    `;
+};
+
+export const updateOrderStatus = async (orderId: string, status: string, changedBy: string = "ADMIN", note?: string) => {
+    const updated = await handleStatusUpdate(orderId, status, changedBy, note);
     
     // Standard revalidation tags
     (revalidateTag as any)("orders");
@@ -239,5 +269,8 @@ export const OrderService = {
     getOrders,
     getOrderById,
     getOrdersByCustomer,
+    countOrdersByCustomer,
+    getReorderItems,
+    updateOrderShipping,
     updateOrderStatus
 };

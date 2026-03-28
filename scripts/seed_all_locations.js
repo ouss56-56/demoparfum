@@ -54,29 +54,26 @@ async function seed() {
         console.log('Wilayas synced successfully.');
 
         // 2. Sync Communes
-        // We'll do this in a batch or one by one. Given the volume, one by one is safer for simple scripts.
-        console.log('Syncing communes (this may take a minute)...');
+        console.log('Preparing batch insert for communes...');
         
-        // Let's clear existing communes first to ensure a clean state, 
-        // OR just use ON CONFLICT if we had a unique constraint on (wilaya_code, name).
-        // Since we want to FIX the missing data, TRUNCATE is cleaner if we're sure.
         await sql`TRUNCATE TABLE communes CASCADE`;
 
-        let totalCommunes = 0;
+        const allCommunes = [];
         for (const w of locations) {
             const code = String(w.id).padStart(2, '0');
-            const communePromises = w.communes.map(communeName => {
-                return sql`
-                    INSERT INTO communes (wilaya_code, name)
-                    VALUES (${code}, ${communeName})
-                `;
-            });
-            await Promise.all(communePromises);
-            totalCommunes += w.communes.length;
-            process.stdout.write(`.`); // Progress indicator
+            for (const name of w.communes) {
+                allCommunes.push({ wilaya_code: code, name });
+            }
         }
+
+        console.log(`Inserting ${allCommunes.length} communes in one batch...`);
         
-        console.log(`\nSuccessfully seeded ${totalCommunes} communes!`);
+        // postgres.js supports batch inserts by passing an array of objects
+        await sql`
+            INSERT INTO communes ${sql(allCommunes, 'wilaya_code', 'name')}
+        `;
+        
+        console.log(`\nSuccessfully seeded ${allCommunes.length} communes!`);
 
     } catch (err) {
         console.error('Seed Error:', err);

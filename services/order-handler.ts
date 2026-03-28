@@ -2,7 +2,7 @@ import { sql } from "@/lib/db";
 import { generateInvoice } from "./invoice-generator";
 import { createNotification } from "./notification-service";
 
-export const handleStatusUpdate = async (orderId: string, newStatus: string, changedBy: string = "ADMIN") => {
+export const handleStatusUpdate = async (orderId: string, newStatus: string, changedBy: string = "ADMIN", note?: string) => {
     const [order] = await sql`SELECT * FROM orders WHERE id = ${orderId}`;
     if (!order) throw new Error("Order not found");
 
@@ -33,7 +33,8 @@ export const handleStatusUpdate = async (orderId: string, newStatus: string, cha
         from: oldStatus,
         to: newStatus,
         at: new Date().toISOString(),
-        by: changedBy
+        by: changedBy,
+        note: note || `Status updated from ${oldStatus} to ${newStatus}`
     });
 
     const [updatedOrder] = await sql`
