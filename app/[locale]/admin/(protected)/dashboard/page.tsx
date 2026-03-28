@@ -18,6 +18,7 @@ import {
     Package, 
     Bell 
 } from "lucide-react";
+import ResetProfitButton from "@/components/admin/ResetProfitButton";
 
 export const dynamic = "force-dynamic";
 

@@ -31,6 +31,22 @@ jsonStr = jsonStr.replace(/,\s*\}/g, '}');
 let locations;
 try {
     locations = JSON.parse(jsonStr);
+    
+    // Add supplemental wilayas 59-69 from SQL setup
+    const supplemental = [
+        { id: "59", name: "Aflou", communes: ["Aflou", "Sebgag", "Sidi Bouzid"] },
+        { id: "60", name: "El Abiodh Sidi Cheikh", communes: ["Ain El Orak", "Arbaouat", "Brezina", "El Abiodh Sidi Cheikh", "Krakda"] },
+        { id: "61", name: "El Aricha", communes: ["El Aricha", "Sidi Djilali"] },
+        { id: "62", name: "El Kantara", communes: ["Branis", "Djemorah", "El Kantara"] },
+        { id: "63", name: "Barika", communes: ["Barika", "Bitam", "M’Doukel"] },
+        { id: "64", name: "Bou Saâda", communes: ["Benamerou", "Bou Saâda", "El Hamel", "Oultem", "Sidi Ameur", "Tamsa"] },
+        { id: "65", name: "Messaad", communes: ["Ain El Ibel", "Amourah", "Deldoul", "Guettara", "Messaad", "Selmana"] },
+        { id: "66", name: "Aïn Oussera", communes: ["Ain Oussera", "Benhar", "Guernini", "Hassi Fedoul", "Sidi Ladjel"] },
+        { id: "67", name: "Bir el-Ater", communes: ["Bir El Ater", "El Ogla El Malha"] },
+        { id: "68", name: "Ksar Chellala", communes: ["Ksar Chellala", "Zmalet El Emir Abdelkader"] },
+        { id: "69", name: "Ksar El Boukhari", communes: ["Ksar El Boukhari", "M’fatha", "Saneg"] }
+    ];
+    locations.push(...supplemental);
 } catch (err) {
     console.error('Failed to parse locations JSON:', err.message);
     // Fallback: If JSON.parse fails, it might be the unquoted keys or similar.
@@ -56,7 +72,11 @@ async function seed() {
         // 2. Sync Communes
         console.log('Preparing batch insert for communes...');
         
-        await sql`TRUNCATE TABLE communes CASCADE`;
+        // Disable statement timeout for this session to allow large ops
+        await sql`SET statement_timeout = 0`;
+        
+        console.log('Cleaning up existing communes...');
+        await sql`DELETE FROM communes`;
 
         const allCommunes = [];
         for (const w of locations) {
