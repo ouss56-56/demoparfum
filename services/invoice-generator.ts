@@ -14,20 +14,20 @@ export const generateInvoice = async (orderId: string, customerId: string, amoun
     };
 
     // Use a transaction to ensure both updates succeed
-    await sql.begin(async (sql) => {
-        await sql`
+    await sql.begin(async (t: any) => {
+        await t`
             INSERT INTO invoices (invoice_number, order_id, customer_id, total_amount, issue_date, status)
             VALUES (${invoiceNumber}, ${orderId}, ${customerId}, ${amount}, ${date.toISOString()}, 'UNPAID')
         `;
         
-        await sql`
+        await t`
             UPDATE orders 
             SET invoice = ${sql.json(invoiceData)}
             WHERE id = ${orderId}
         `;
     });
 
-    return { invoiceNumber, ...invoiceData };
+    return { ...invoiceData };
 };
 
 export const getInvoicesByCustomer = async (customerId: string) => {
