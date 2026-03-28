@@ -73,7 +73,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
                     </Link>
                     {order.invoice?.invoiceNumber && (
                         <a
-                            href={`/${locale}/admin/invoices/${order.id}/print`}
+                            href={`/${locale}/admin/orders/${order.id}/invoice/print`}
                             target="_blank"
                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm"
                         >

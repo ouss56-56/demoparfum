@@ -94,12 +94,12 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
 
     const recentOrders = allOrders.slice(0, 5).map((o: any) => ({
         ...o,
-        totalPrice: Number(o.total_price),
-        paymentStatus: o.payment_status,
-        createdAt: o.created_at ? new Date(o.created_at) : new Date(0),
+        totalPrice: Number(o.totalPrice || 0),
+        paymentStatus: o.paymentStatus || "UNPAID",
+        createdAt: o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt || 0),
         customer: {
-            shopName: o.customers?.shop_name || "Unknown",
-            name: o.customers?.name || ""
+            shopName: o.customer?.shopName || "Unknown",
+            name: o.customer?.name || ""
         }
     }));
 

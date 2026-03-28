@@ -17,25 +17,24 @@ export default async function PrintInvoicePage({ params }: { params: Promise<{ l
     const unifiedInvoice = {
         invoiceNumber: invoiceData.invoiceNumber,
         issueDate: invoiceData.issueDate || new Date(),
-        totalAmount: order.total_price,
+        totalAmount: order.totalPrice,
         orderId: order.id,
-        amountPaid: Number(order.amount_paid || 0),
-        paymentStatus: order.payment_status || "UNPAID",
+        amountPaid: Number(order.amountPaid || 0),
+        paymentStatus: order.paymentStatus || "UNPAID",
         order: {
             customer: {
-                shopName: order.customer?.shop_name || "Unknown",
+                shopName: order.customer?.shopName || "Unknown",
                 name: order.customer?.name || "",
                 address: order.customer?.address || "",
                 wilaya: order.customer?.wilaya || "",
                 phone: order.customer?.phone || "",
             },
             items: (order.items || []).map((item: any) => {
-                const prod = Array.isArray(item.product) ? item.product[0] : item.product;
                 return {
                     product: {
-                        name: (prod?.name || item.product_name) || "Product",
-                        brand: prod?.brand || "",
-                        imageUrl: prod?.image_url || null
+                        name: item.product?.name || "Product",
+                        brand: item.product?.brand || "",
+                        imageUrl: item.product?.imageUrl || null
                     },
                     quantity: item.quantity,
                     price: item.price

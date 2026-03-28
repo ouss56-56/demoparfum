@@ -73,14 +73,14 @@ function mapOrder(data: any): Order {
                 imageUrl: item.products.image_url
             } : undefined
         })),
-        customer: data.users ? {
-            id: data.users.id,
-            name: data.users.name,
-            shopName: data.users.shop_name,
-            phone: data.users.phone,
-            address: data.users.address,
-            wilaya: data.users.wilaya,
-            commune: data.users.commune
+        customer: data.customers ? {
+            id: data.customers.id,
+            name: data.customers.name,
+            shopName: data.customers.shop_name,
+            phone: data.customers.phone,
+            address: data.customers.address,
+            wilaya: data.customers.wilaya,
+            commune: data.customers.commune
         } : null,
         shipping: data.shipping || null,
         invoice: data.invoice_number ? { invoiceNumber: data.invoice_number } : null,
@@ -148,7 +148,7 @@ export const getOrders = async (limit = 50): Promise<Order[]> => {
         SELECT 
             o.*,
             inv.invoice_number,
-            (SELECT row_to_json(u) FROM users u WHERE u.id = o.customer_id) as users,
+            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
             (
                 SELECT json_agg(json_build_object(
                     'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
@@ -170,7 +170,7 @@ export const getOrderById = async (id: string): Promise<Order | null> => {
         SELECT 
             o.*,
             inv.invoice_number,
-            (SELECT row_to_json(u) FROM users u WHERE u.id = o.customer_id) as users,
+            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
             (
                 SELECT json_agg(json_build_object(
                     'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
@@ -195,7 +195,7 @@ export const getOrdersByCustomer = (customerId: string, limit = 10, skip = 0): P
                 SELECT 
                     o.*,
                     inv.invoice_number,
-                    (SELECT row_to_json(u) FROM users u WHERE u.id = o.customer_id) as users,
+                    (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
                     (
                         SELECT json_agg(json_build_object(
                             'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,

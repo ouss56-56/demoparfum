@@ -5,7 +5,7 @@ export const getInvoices = async () => {
     const data = await sql`
         SELECT 
             i.*,
-            u.id as customer_id, u.shop_name, u.name as customer_name,
+            c.id as customer_id, c.shop_name, c.name as customer_name,
             o.status as order_status, o.total_price as order_total,
             (
                 SELECT json_agg(json_build_object(
@@ -16,7 +16,7 @@ export const getInvoices = async () => {
                 FROM order_items oi WHERE oi.order_id = i.order_id
             ) as order_items
         FROM invoices i
-        JOIN users u ON i.customer_id = u.id
+        JOIN customers c ON i.customer_id = c.id
         JOIN orders o ON i.order_id = o.id
         ORDER BY i.issue_date DESC
     `;
@@ -50,7 +50,7 @@ export const getInvoiceById = async (invoiceNumber: string) => {
     const [data] = await sql`
         SELECT 
             i.*,
-            u.id as customer_id, u.shop_name, u.name as customer_name, u.address, u.phone,
+            c.id as customer_id, c.shop_name, c.name as customer_name, c.address, c.phone,
             o.status as order_status, o.total_price as order_total,
             (
                 SELECT json_agg(json_build_object(
@@ -61,7 +61,7 @@ export const getInvoiceById = async (invoiceNumber: string) => {
                 FROM order_items oi WHERE oi.order_id = i.order_id
             ) as order_items
         FROM invoices i
-        JOIN users u ON i.customer_id = u.id
+        JOIN customers c ON i.customer_id = c.id
         JOIN orders o ON i.order_id = o.id
         WHERE i.invoice_number = ${invoiceNumber}
         LIMIT 1
