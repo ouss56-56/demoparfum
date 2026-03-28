@@ -66,14 +66,19 @@ async function seed() {
             }
         }
 
-        console.log(`Inserting ${allCommunes.length} communes in one batch...`);
+        console.log(`Prepared ${allCommunes.length} communes for insertion.`);
         
-        // postgres.js supports batch inserts by passing an array of objects
-        await sql`
-            INSERT INTO communes ${sql(allCommunes, 'wilaya_code', 'name')}
-        `;
+        // Split into chunks of 500
+        const chunkSize = 500;
+        for (let i = 0; i < allCommunes.length; i += chunkSize) {
+            const chunk = allCommunes.slice(i, i + chunkSize);
+            console.log(`Inserting chunk ${Math.floor(i / chunkSize) + 1}...`);
+            await sql`
+                INSERT INTO communes ${sql(chunk, 'wilaya_code', 'name')}
+            `;
+        }
         
-        console.log(`\nSuccessfully seeded ${allCommunes.length} communes!`);
+        console.log(`\nSuccessfully seeded ${allCommunes.length} communes in chunks!`);
 
     } catch (err) {
         console.error('Seed Error:', err);
