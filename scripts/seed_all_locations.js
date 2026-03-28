@@ -19,11 +19,10 @@ const sql = postgres(dbUrl, { ssl: 'require' });
 const locationsPath = path.join(__dirname, '..', 'data', 'algeria-locations.ts');
 let locationsContent = fs.readFileSync(locationsPath, 'utf8');
 
-// Simplistic parsing: extract everything between the first [ and the last ]
-// and clean it up to be valid JSON if needed (though it looks like valid JSON)
-const jsonStartIndex = locationsContent.indexOf('[');
-const jsonEndIndex = locationsContent.lastIndexOf(']') + 1;
-let jsonStr = locationsContent.substring(jsonStartIndex, jsonEndIndex);
+// Skip the 'export const algeriaLocations: WilayaData[] = ' part
+const dataStartIndex = locationsContent.indexOf('= [') + 2;
+const dataEndIndex = locationsContent.lastIndexOf(']') + 1;
+let jsonStr = locationsContent.substring(dataStartIndex, dataEndIndex);
 
 // Remove any trailing commas that might break JSON.parse
 jsonStr = jsonStr.replace(/,\s*\]/g, ']');
