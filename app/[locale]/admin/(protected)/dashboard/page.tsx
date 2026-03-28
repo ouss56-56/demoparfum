@@ -1,12 +1,10 @@
+import { getAdminMetrics } from "@/services/metrics-service";
 import { IntelligenceService } from "@/services/intelligence-service";
-import { AdminService } from "@/services/admin-service";
 import { ProductService } from "@/services/product-service";
-import { CustomerService } from "@/services/customer-service";
 import { OrderService } from "@/services/order-service";
 import { NotificationService } from "@/services/notification-service";
 import SafeImage from "@/components/SafeImage";
 import Link from "next/link";
-import ResetProfitButton from "@/components/admin/ResetProfitButton";
 import RealtimeReloader from "@/components/admin/RealtimeReloader";
 import { getTranslations } from "next-intl/server";
 import { 
@@ -29,82 +27,40 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
     const tc = await getTranslations({ locale, namespace: "common" });
     const ts = await getTranslations({ locale, namespace: "common.status" });
     
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-    let productsCount: number = 0, 
-        customersCount: number = 0, 
-        unreadNotifications: number = 0, 
-        inventoryHealthScore: number = 0;
-    
-    let allOrders: any[] = [];
-    let productsList: any[] = [];
+    let metrics, productsList, unreadNotifications, inventoryHealthScore, allOrders;
 
     try {
-        const [
-            pStats,
-            allP,
-            cCount,
-            oData,
-            unreadN,
-            healthScore
-        ] = await Promise.all([
-            AdminService.getAdminStats(),
+        const [m, p, un, ih, ao] = await Promise.all([
+            getAdminMetrics(),
             ProductService.getProducts({ limit: 500 }),
-            CustomerService.getCustomers(1),
-            OrderService.getOrders(200),
             NotificationService.getUnreadCount(),
             IntelligenceService.getInventoryHealthScore(),
+            OrderService.getOrders(5), // for recent orders
         ]);
-
-        productsCount = pStats.totalProducts;
-        productsList = allP || [];
-        customersCount = pStats.totalCustomers;
-        allOrders = oData || [];
-        unreadNotifications = unreadN;
-        inventoryHealthScore = healthScore;
-
+        
+        metrics = m;
+        productsList = p;
+        unreadNotifications = un;
+        inventoryHealthScore = ih;
+        allOrders = ao;
     } catch (err) {
         console.error("Dashboard data fetch error:", err);
-        return (
-            <div className="p-8 text-center bg-white rounded-3xl border border-red-100 shadow-sm">
-                <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Impossible de charger le tableau de bord</h2>
-                <p className="text-gray-500 mb-6">Une erreur s'est produite lors de la récupération des données.</p>
-                <Link href={`/${locale}/admin/dashboard`} className="px-6 py-2 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors">
-                    Actualiser
-                </Link>
-            </div>
-        );
+        return <div className="p-8 text-center text-red-500">Error loading dashboard</div>;
     }
 
-    const totalOrders = allOrders.length;
-    const pendingOrders = allOrders.filter((o: any) => o.status === "PENDING").length;
-    const nonCancelled = allOrders.filter((o: any) => o.status !== "CANCELLED");
-
-    const revenue = nonCancelled.reduce((sum: number, o: any) => sum + Number(o.total_price || 0), 0);
-    const unpaidBalance = nonCancelled
-        .filter((o: any) => o.payment_status === "UNPAID" || o.payment_status === "PARTIALLY_PAID")
-        .reduce((sum: number, o: any) => sum + (Number(o.total_price || 0) - Number(o.amount_paid || 0)), 0);
+    const { 
+        totalRevenue, unpaidBalance, dailyRevenue, monthlyRevenue, 
+        totalOrders, pendingOrders, customersCount, productsCount 
+    } = metrics;
     
-    const partiallyPaidCount = allOrders.filter((o: any) => o.payment_status === "PARTIALLY_PAID").length;
-
-    const dailyRevenue = nonCancelled
-        .filter((o: any) => o.created_at >= startOfDay)
-        .reduce((sum: number, o: any) => sum + Number(o.total_price || 0), 0);
-
-    const monthlyRevenue = nonCancelled
-        .filter((o: any) => o.created_at >= startOfMonth)
-        .reduce((sum: number, o: any) => sum + Number(o.total_price || 0), 0);
-
-    const lowStockProducts = productsList.filter((p: any) => {
-        return (Number(p.stock_weight || 0) <= Number(p.low_stock_threshold || 500)) && (Number(p.stock_weight || 0) > 0);
-    }).length;
+    // Derived metrics remaining in UI for visual flair
+    const lowStockProducts = productsList.filter((p: any) => 
+        Number(p.stock_weight || 0) <= Number(p.low_stock_threshold || 500) && Number(p.stock_weight || 0) > 0
+    ).length;
 
     const totalCost = productsList.reduce((sum: number, p: any) => sum + (Number(p.purchase_price || 0) * Number(p.sales_units_sold || 0)), 0);
-    const totalProfit = revenue - totalCost;
-    const profitMargin = revenue > 0 ? (totalProfit / revenue) * 100 : 0;
+    const totalProfit = totalRevenue - totalCost;
+    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
     const stockForecast = productsList
         .filter((p: any) => Number(p.sales_units_sold || 0) > 0 && Number(p.stock_weight || 0) > 0)
@@ -199,7 +155,7 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
                         </div>
                         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider relative z-10">{t("total_revenue")}</h3>
                     </div>
-                    <p className="text-2xl font-bold text-primary-dark relative z-10">{formatCurrency(revenue)}</p>
+                    <p className="text-2xl font-bold text-primary-dark relative z-10">{formatCurrency(totalRevenue)}</p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-primary/10 shadow-sm relative overflow-hidden group">
@@ -213,7 +169,7 @@ export default async function AdminDashboard({ params }: { params: Promise<{ loc
                         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider relative z-10">{t("unpaid_balance")}</h3>
                     </div>
                     <p className="text-2xl font-bold text-red-600 relative z-10">{formatCurrency(unpaidBalance)}</p>
-                    <p className="text-xs text-gray-400 mt-2 font-medium">{t("unpaid_note", { count: partiallyPaidCount })}</p>
+                    <p className="text-xs text-gray-400 mt-2 font-medium">{t("unpaid_note", { count: pendingOrders })}</p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-primary/10 shadow-sm relative overflow-hidden group">

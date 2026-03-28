@@ -4,75 +4,92 @@ import { sql } from "@/lib/db";
 export const getInvoices = async () => {
     const data = await sql`
         SELECT 
-            o.*,
-            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
-            (
-                SELECT json_agg(json_build_object(
-                    'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
-                    'volume_id', oi.volume_id, 'volume_data', oi.volume_data,
-                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
-                ))
-                FROM order_items oi WHERE oi.order_id = o.id
-            ) as order_items
-        FROM orders o
-        WHERE o.invoice IS NOT NULL
-        ORDER BY o.created_at DESC
-    `;
-
-    return (data || []).map((order: any) => ({
-        id: order.invoice?.invoiceNumber || order.id,
-        orderId: order.id,
-        invoiceNumber: order.invoice?.invoiceNumber,
-        issueDate: order.invoice?.issueDate ? new Date(order.invoice.issueDate) : null,
-        totalAmount: order.invoice?.totalAmount,
-        order: {
-            id: order.id,
-            ...order,
-            customer: order.customers,
-            items: (order.order_items || []).map((item: any) => ({
-                ...item,
-                volume: item.volume_data,
-                volumeId: item.volume_data?.id,
-                product: item.product
-            }))
-        }
-    }));
-};
-
-export const getInvoiceById = async (id: string) => {
-    const [data] = await sql`
-        SELECT 
-            o.*,
-            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
+            i.*,
+            u.id as customer_id, u.shop_name, u.name as customer_name,
+            o.status as order_status, o.total_price as order_total,
             (
                 SELECT json_agg(json_build_object(
                     'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
                     'volume_data', oi.volume_data,
                     'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
                 ))
-                FROM order_items oi WHERE oi.order_id = o.id
+                FROM order_items oi WHERE oi.order_id = i.order_id
             ) as order_items
-        FROM orders o
-        WHERE o.invoice->>'invoiceNumber' = ${id}
+        FROM invoices i
+        JOIN users u ON i.customer_id = u.id
+        JOIN orders o ON i.order_id = o.id
+        ORDER BY i.issue_date DESC
+    `;
+
+    return (data || []).map((inv: any) => ({
+        id: inv.invoice_number,
+        orderId: inv.order_id,
+        invoiceNumber: inv.invoice_number,
+        issueDate: inv.issue_date ? new Date(inv.issue_date) : null,
+        totalAmount: Number(inv.total_amount),
+        status: inv.status,
+        order: {
+            id: inv.order_id,
+            status: inv.order_status,
+            totalPrice: Number(inv.order_total),
+            customer: {
+                id: inv.customer_id,
+                shopName: inv.shop_name,
+                name: inv.customer_name
+            },
+            items: (inv.order_items || []).map((item: any) => ({
+                ...item,
+                volume: item.volume_data,
+                product: item.product
+            }))
+        }
+    }));
+};
+
+export const getInvoiceById = async (invoiceNumber: string) => {
+    const [data] = await sql`
+        SELECT 
+            i.*,
+            u.id as customer_id, u.shop_name, u.name as customer_name, u.address, u.phone,
+            o.status as order_status, o.total_price as order_total,
+            (
+                SELECT json_agg(json_build_object(
+                    'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
+                    'volume_data', oi.volume_data,
+                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
+                ))
+                FROM order_items oi WHERE oi.order_id = i.order_id
+            ) as order_items
+        FROM invoices i
+        JOIN users u ON i.customer_id = u.id
+        JOIN orders o ON i.order_id = o.id
+        WHERE i.invoice_number = ${invoiceNumber}
         LIMIT 1
     `;
 
     if (!data) return null;
 
     return {
-        id: data.invoice?.invoiceNumber || data.id,
-        orderId: data.id,
-        invoiceNumber: data.invoice?.invoiceNumber,
-        issueDate: data.invoice?.issueDate ? new Date(data.invoice.issueDate) : null,
-        totalAmount: data.invoice?.totalAmount,
+        id: data.invoice_number,
+        orderId: data.order_id,
+        invoiceNumber: data.invoice_number,
+        issueDate: data.issue_date ? new Date(data.issue_date) : null,
+        totalAmount: Number(data.total_amount),
+        status: data.status,
         order: {
-            id: data.id,
-            ...data,
-            customer: data.customers,
+            id: data.order_id,
+            status: data.order_status,
+            totalPrice: Number(data.order_total),
+            customer: {
+                id: data.customer_id,
+                shopName: data.shop_name,
+                name: data.customer_name,
+                address: data.address,
+                phone: data.phone
+            },
             items: (data.order_items || []).map((item: any) => ({
                 ...item,
                 volume: item.volume_data,
-                volumeId: item.volume_data?.id,
                 product: item.product
             }))
         }
@@ -81,69 +98,16 @@ export const getInvoiceById = async (id: string) => {
 
 export const getInvoiceByOrderId = async (orderId: string) => {
     const [data] = await sql`
-        SELECT 
-            o.*,
-            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
-            (
-                SELECT json_agg(json_build_object(
-                    'id', oi.id, 'product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price,
-                    'volume_data', oi.volume_data,
-                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
-                ))
-                FROM order_items oi WHERE oi.order_id = o.id
-            ) as order_items
-        FROM orders o
-        WHERE o.id = ${orderId}
-        LIMIT 1
+        SELECT i.* FROM invoices i WHERE i.order_id = ${orderId} LIMIT 1
     `;
-
-    if (!data || !data.invoice) return null;
-
-    return {
-        id: data.invoice.invoiceNumber || data.id,
-        orderId: data.id,
-        invoiceNumber: data.invoice.invoiceNumber,
-        issueDate: data.invoice.issueDate ? new Date(data.invoice.issueDate) : null,
-        totalAmount: data.invoice.totalAmount,
-        order: {
-            id: data.id,
-            ...data,
-            customer: data.customers,
-            items: (data.order_items || []).map((item: any) => ({
-                ...item,
-                volume: item.volume_data,
-                volumeId: item.volume_data?.id,
-                product: item.product
-            }))
-        }
-    };
+    if (!data) return null;
+    return getInvoiceById(data.invoice_number);
 };
 
-// ── CREATE ────────────────────────────────────────────────────────────────
 export const createInvoice = async (orderId: string, amount: number) => {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const random = Math.floor(1000 + Math.random() * 9000);
-    const invoiceNumber = `INV-${year}${month}-${random}`;
-    
-    const invoiceData = {
-        invoiceNumber,
-        issueDate: date.toISOString(),
-        totalAmount: amount
-    };
-
-    const [updatedOrder] = await sql`
-        UPDATE orders SET invoice = ${JSON.stringify(invoiceData)}::jsonb
-        WHERE id = ${orderId}
-        RETURNING *
-    `;
-
-    if (!updatedOrder) throw new Error("Failed to update order with invoice");
-
-    return { 
-        id: invoiceNumber, 
-        orderId, 
-        ...invoiceData 
-    };
+   // Proxy to generator
+   const { generateInvoice } = await import("./invoice-generator");
+   const [order] = await sql`SELECT customer_id FROM orders WHERE id = ${orderId}`;
+   if (!order) throw new Error("Order not found");
+   return generateInvoice(orderId, order.customer_id, amount);
 };

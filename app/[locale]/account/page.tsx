@@ -1,5 +1,6 @@
 import { requireCustomerSession } from "@/lib/customer-auth";
 import { getOrdersByCustomer } from "@/services/order-service";
+import { getCustomerMetrics } from "@/services/metrics-service";
 import {
     User,
     Phone,
@@ -17,7 +18,6 @@ import RealtimeOrderList from "@/components/shop/RealtimeOrderList";
 import { getCart } from "@/services/cart-service";
 import SafeImage from "@/components/SafeImage";
 import { getTranslations } from "next-intl/server";
-import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +27,11 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
     const t = await getTranslations({ locale, namespace: "account" });
     const com = await getTranslations({ locale, namespace: "common" });
     const customer = await requireCustomerSession();
-    const [rawOrders, cart] = await Promise.all([
+    
+    const [rawOrders, cart, metrics] = await Promise.all([
         getOrdersByCustomer(customer.id),
-        getCart(customer.id)
+        getCart(customer.id),
+        getCustomerMetrics(customer.id)
     ]);
 
     // Serialize Decimal values for Client Components
@@ -50,12 +52,10 @@ export default async function AccountPage({ params }: { params: Promise<{ locale
         weight: Number(item.weight)
     }));
 
-    const totalSpent = orders
-        .filter(o => o.status !== "CANCELLED")
-        .reduce((sum, order) => sum + Number(order.totalPrice), 0);
+    const { totalOrders, totalSpent, balanceDue } = metrics;
 
     const stats = [
-        { label: t("total_orders"), value: orders.length, icon: ShoppingBag, color: "text-[#2563EB]", bg: "bg-[#2563EB]/10" },
+        { label: t("total_orders"), value: totalOrders, icon: ShoppingBag, color: "text-[#2563EB]", bg: "bg-[#2563EB]/10" },
         { label: t("total_spent"), value: `${totalSpent.toLocaleString()} ${com("labels.currency")}`, icon: TrendingUp, color: "text-[#059669]", bg: "bg-[#059669]/10" },
     ];
 

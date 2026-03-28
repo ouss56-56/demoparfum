@@ -34,14 +34,31 @@ export const createAdminUser = async (data: {
 
 export const getAdminStats = async () => {
     try {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
         // Fetch stats individually to prevent one missing table from breaking everything
         const [ordersResult] = await sql`SELECT count(*) as count FROM orders`.catch(() => [{ count: 0 }]);
         const [customersResult] = await sql`SELECT count(*) as count FROM customers`.catch(() => [{ count: 0 }]);
         const [productsResult] = await sql`SELECT count(*) as count FROM products`.catch(() => [{ count: 0 }]);
+        
         const [revenueResult] = await sql`
             SELECT SUM(total_price) as total 
             FROM orders 
             WHERE status != 'CANCELLED'
+        `.catch(() => [{ total: 0 }]);
+
+        const [dailyRevenueResult] = await sql`
+            SELECT SUM(total_price) as total 
+            FROM orders 
+            WHERE status != 'CANCELLED' AND created_at >= ${startOfDay}
+        `.catch(() => [{ total: 0 }]);
+
+        const [monthlyRevenueResult] = await sql`
+            SELECT SUM(total_price) as total 
+            FROM orders 
+            WHERE status != 'CANCELLED' AND created_at >= ${startOfMonth}
         `.catch(() => [{ total: 0 }]);
 
         return {
@@ -49,6 +66,8 @@ export const getAdminStats = async () => {
             totalCustomers: Number(customersResult?.count) || 0,
             totalProducts: Number(productsResult?.count) || 0,
             totalRevenue: Number(revenueResult?.total) || 0,
+            dailyRevenue: Number(dailyRevenueResult?.total) || 0,
+            monthlyRevenue: Number(monthlyRevenueResult?.total) || 0,
         };
     } catch (error) {
         console.error("Error in AdminService.getAdminStats:", error);
@@ -57,6 +76,8 @@ export const getAdminStats = async () => {
             totalCustomers: 0,
             totalProducts: 0,
             totalRevenue: 0,
+            dailyRevenue: 0,
+            monthlyRevenue: 0,
         };
     }
 };

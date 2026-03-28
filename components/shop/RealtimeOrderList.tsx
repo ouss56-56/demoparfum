@@ -12,6 +12,7 @@ interface Order {
     totalPrice: number;
     status: string;
     createdAt: string | Date;
+    invoice?: any;
 }
 
 interface RealtimeOrderListProps {
@@ -26,6 +27,7 @@ function mapRealtimeOrder(raw: Record<string, any>): Partial<Order> {
         totalPrice: raw.total_price ?? raw.totalPrice,
         status: raw.status,
         createdAt: raw.created_at ?? raw.createdAt,
+        invoice: raw.invoice,
     };
 }
 

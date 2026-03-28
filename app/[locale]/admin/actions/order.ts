@@ -2,8 +2,8 @@
 
 import { sql } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { updateOrderStatus } from "@/services/order-service";
-import { createInvoice } from "@/services/invoice-service";
+import { handleStatusUpdate } from "@/services/order-handler";
+import { generateInvoice } from "@/services/invoice-generator";
 import { OrderStatus } from "@/lib/constants";
 import { requireCustomerSession } from "@/lib/customer-auth";
 import { logAdminAction } from "@/services/audit-service";
@@ -39,7 +39,7 @@ export async function cancelOrderAction(orderId: string) {
             return { success: false, error: "Only pending orders can be cancelled." };
         }
 
-        await updateOrderStatus(orderId, OrderStatus.CANCELLED, "CUSTOMER", "Cancelled by user via account dashboard.");
+        await handleStatusUpdate(orderId, OrderStatus.CANCELLED, "CUSTOMER");
 
         revalidatePath(`/account/orders/${orderId}`);
         revalidatePath("/account/orders");
@@ -54,7 +54,7 @@ export async function cancelOrderAction(orderId: string) {
 
 export async function adminUpdateOrderStatus(orderId: string, status: string) {
     try {
-        await updateOrderStatus(orderId, status, "ADMIN", `Status updated manually by admin to ${status}.`);
+        await handleStatusUpdate(orderId, status, "ADMIN");
         
         const adminId = await getAdminId();
         if (adminId) {
@@ -124,7 +124,9 @@ export async function updateOrderPayment(orderId: string, amountPaid: number) {
 
 export async function generateInvoiceAction(orderId: string, amount: number) {
     try {
-        await createInvoice(orderId, amount);
+        const [order] = await sql`SELECT customer_id FROM orders WHERE id = ${orderId} LIMIT 1`;
+        if (!order) throw new Error("Order not found");
+        await generateInvoice(orderId, order.customer_id, amount);
         revalidatePath("/admin/orders");
         revalidatePath(`/account/orders/${orderId}`);
         return { success: true };

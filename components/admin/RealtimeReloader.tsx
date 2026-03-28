@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 
 export default function RealtimeReloader() {
     const router = useRouter();
-    const { lastUpdate } = useRealtimeRefresh(["orders", "products", "inventory_logs"]);
+    const { lastUpdate } = useRealtimeRefresh(["orders", "products", "inventory_logs", "invoices"]);
     const isFirstRender = useRef(true);
 
     useEffect(() => {
