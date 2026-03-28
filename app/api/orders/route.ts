@@ -51,6 +51,10 @@ export async function POST(request: Request) {
                 commune: shippingData?.commune,
             });
 
+            if (!order) {
+                throw Errors.internal("Failed to retrieve the created order.");
+            }
+
             // Log success (fire-and-forget — never block the response)
             logEvent("ORDER_CREATED", order.id, `Order created by customer ${customer.id}. Total: ${order.totalPrice}`)
                 .catch((logErr) => console.error("[Logger] Non-blocking log error:", logErr));
