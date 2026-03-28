@@ -1,6 +1,7 @@
 import { Search, FileText, ExternalLink } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { sql } from "@/lib/db";
+import { getInvoices } from "@/services/invoice-service";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -9,31 +10,7 @@ export default async function AdminInvoicesPage({ params }: { params: Promise<{ 
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: "admin.invoices" });
 
-    const ordersWithInvoices = await sql`
-        SELECT 
-            o.id,
-            o.total_price,
-            o.invoice,
-            o.created_at,
-            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers
-        FROM orders o
-        WHERE o.invoice IS NOT NULL
-        ORDER BY o.created_at DESC
-    `;
-
-    const invoices = (ordersWithInvoices || []).map((order: any) => ({
-        id: order.id,
-        invoiceNumber: order.invoice?.invoiceNumber || "N/A",
-        issueDate: new Date(order.invoice?.issueDate || order.created_at),
-        totalAmount: order.invoice?.totalAmount || order.total_price,
-        orderId: order.id,
-        order: { 
-            customer: { 
-                shopName: order.customers?.shop_name || "Unknown",
-                name: order.customers?.name || ""
-            } 
-        },
-    }));
+    const invoices = await getInvoices();
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : "fr-FR", { 
@@ -83,7 +60,7 @@ export default async function AdminInvoicesPage({ params }: { params: Promise<{ 
                                         <div className="text-xs">{t("table.customer")} #{invoice.orderId.slice(0, 8).toUpperCase()}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        {formatDate(invoice.issueDate)}
+                                        {formatDate(invoice.issueDate || new Date())}
                                     </td>
                                     <td className="px-6 py-4 font-semibold text-primary-dark">
                                         {formatCurrency(Number(invoice.totalAmount))}

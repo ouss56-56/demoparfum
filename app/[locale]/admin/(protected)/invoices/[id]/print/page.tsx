@@ -1,4 +1,4 @@
-import { sql } from "@/lib/db";
+import { getInvoiceByOrderId } from "@/services/invoice-service";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import InvoiceView from "@/components/shop/InvoiceView";
@@ -9,65 +9,16 @@ export const dynamic = "force-dynamic";
 export default async function InvoicePrintPage({ params }: { params: Promise<{ id: string, locale: string }> }) {
     const { id, locale } = await params;
     
-    // Fetch order with embedded invoice and customer details via direct SQL
-    const [orderData] = await sql`
-        SELECT 
-            o.*,
-            (SELECT row_to_json(c) FROM customers c WHERE c.id = o.customer_id) as customers,
-            (
-                SELECT json_agg(json_build_object(
-                    'id', oi.id,
-                    'product_id', oi.product_id,
-                    'quantity', oi.quantity,
-                    'price', oi.price,
-                    'volume_id', oi.volume_id,
-                    'volume_data', oi.volume_data,
-                    'product', (SELECT row_to_json(p) FROM products p WHERE p.id = oi.product_id)
-                ))
-                FROM order_items oi WHERE oi.order_id = o.id
-            ) as items
-        FROM orders o
-        WHERE o.id = ${id}
-        LIMIT 1
-    `;
-    
-    if (!orderData || !orderData.invoice) {
-        return <div className="p-8">Invoice not found.</div>;
-    }
-
-    const customer = orderData.customers || { shop_name: "Unknown", name: "", address: "", wilaya: "", phone: "" };
-
-    const items: any[] = (orderData.items || []).map((item: any) => {
-        const prod = item.product;
-        return {
-            id: item.product_id,
-            quantity: item.quantity,
-            price: item.price,
-            volume: item.volume_data,
-            volumeId: item.volume_data?.id,
-            product: { 
-                name: prod?.name || "Product", 
-                brand: prod?.brand || "",
-                imageUrl: prod?.image_url
-            }
-        };
-    });
+    const invoiceData = await getInvoiceByOrderId(id);
+    if (!invoiceData) return <div className="p-8">Invoice not found.</div>;
+    const orderData = invoiceData.order as any;
 
     const invoice = {
-        invoiceNumber: orderData.invoice.invoiceNumber,
-        issueDate: new Date(orderData.invoice.issueDate || orderData.created_at),
-        totalAmount: orderData.invoice.totalAmount || orderData.total_price,
+        invoiceNumber: invoiceData.invoiceNumber,
+        issueDate: invoiceData.issueDate || new Date(),
+        totalAmount: invoiceData.totalAmount,
         orderId: id,
-        order: { 
-            customer: {
-                shopName: customer.shop_name,
-                name: customer.name,
-                address: customer.address,
-                wilaya: customer.wilaya,
-                phone: customer.phone
-            }, 
-            items 
-        },
+        order: orderData
     };
 
     return (

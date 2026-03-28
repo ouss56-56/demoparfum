@@ -1,4 +1,4 @@
-import { getOrderById } from "@/services/order-service";
+import { getInvoiceByOrderId } from "@/services/invoice-service";
 import SafeImage from "@/components/SafeImage";
 import { Printer, Download } from "lucide-react";
 import { Metadata } from "next";
@@ -15,11 +15,9 @@ export default async function InvoicePage({
     params: Promise<{ locale: string; orderId: string }> 
 }) {
     const { locale, orderId } = await params;
-    const order = await getOrderById(orderId);
-
-    if (!order || !order.invoice) {
-        notFound();
-    }
+    const invoice = await getInvoiceByOrderId(orderId);
+    if (!invoice) notFound();
+    const order = invoice.order as any;
 
     const isRtl = locale === 'ar';
 
@@ -62,8 +60,8 @@ export default async function InvoicePage({
                     </div>
                     <div className="text-right rtl:text-left">
                         <h2 className="text-4xl font-serif font-bold text-gray-900 mb-2">INVOICE</h2>
-                        <div className="text-sm font-bold text-primary uppercase tracking-widest">{order.invoice.invoiceNumber}</div>
-                        <div className="text-xs text-gray-400 mt-1">Date: {new Date(order.invoice.issueDate).toLocaleDateString(locale)}</div>
+                        <div className="text-sm font-bold text-primary uppercase tracking-widest">{invoice.invoiceNumber}</div>
+                        <div className="text-xs text-gray-400 mt-1">Date: {new Date(invoice.issueDate || "").toLocaleDateString(locale)}</div>
                     </div>
                 </div>
 
